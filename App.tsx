@@ -3,13 +3,13 @@ import {
   StyleSheet,
   Text,
   View,
-  SafeAreaView,
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
   StatusBar,
   Platform,
 } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 
 import { Expedition, Mission, Verification } from './src/types';
@@ -250,8 +250,9 @@ export default function App() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ExpoStatusBar style="light" />
+    <SafeAreaProvider style={{ flex: 1, backgroundColor: THEME.colors.bg }}>
+      <SafeAreaView style={styles.safeArea}>
+        <ExpoStatusBar style="light" />
 
       {/* Screen: HOME (FR-01) */}
       {screen === 'HOME' && (
@@ -411,6 +412,7 @@ export default function App() {
         lifetimeXP={lifetimeXP}
       />
     </SafeAreaView>
+  </SafeAreaProvider>
   );
 }
 

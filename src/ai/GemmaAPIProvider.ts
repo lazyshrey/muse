@@ -24,6 +24,40 @@ export class GemmaAPIProvider implements AIProvider {
   }
 
   /**
+   * Helper that attempts generation with gemini-3.5-flash first, falling back to gemini-flash-latest
+   */
+  private async executeWithModelFallback(
+    payload: object
+  ): Promise<any> {
+    const candidateModels = ['gemini-3.5-flash', 'gemini-flash-latest'];
+    let lastError: Error | null = null;
+
+    for (const model of candidateModels) {
+      try {
+        const url = `${this.endpoint}/models/${model}:generateContent?key=${this.apiKey}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (res.ok) {
+          return await res.json();
+        }
+
+        const errText = await res.text();
+        console.warn(`[GemmaAPIProvider] Model ${model} returned ${res.status}: ${errText}`);
+        lastError = new Error(`Gemma API error (${res.status}): ${errText}`);
+      } catch (err) {
+        console.warn(`[GemmaAPIProvider] Network error calling ${model}:`, err);
+        lastError = err instanceof Error ? err : new Error(String(err));
+      }
+    }
+
+    throw lastError || new Error('All candidate models failed to respond.');
+  }
+
+  /**
    * Generates mission using Gemma via API
    */
   async generateMission(context: GameContext): Promise<Mission> {
@@ -32,9 +66,6 @@ export class GemmaAPIProvider implements AIProvider {
     }
 
     const prompt = buildMissionGenerationPrompt(context);
-    const model = 'gemini-1.5-flash'; // High-speed multimodal compatible with Google AI
-
-    const url = `${this.endpoint}/models/${model}:generateContent?key=${this.apiKey}`;
     const payload = {
       contents: [
         {
@@ -48,18 +79,7 @@ export class GemmaAPIProvider implements AIProvider {
       },
     };
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Gemma API error (${res.status}): ${errText}`);
-    }
-
-    const data = await res.json();
+    const data = await this.executeWithModelFallback(payload);
     const candidateText = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
     return parseMissionJson(candidateText, context.difficulty);
   }
@@ -73,7 +93,6 @@ export class GemmaAPIProvider implements AIProvider {
     }
 
     const prompt = buildVerificationPrompt(mission);
-    const model = 'gemini-1.5-flash';
 
     // Extract raw base64 data if prefixed with data:image/...
     let base64Data = imageBase64OrUri;
@@ -86,7 +105,6 @@ export class GemmaAPIProvider implements AIProvider {
       }
     }
 
-    const url = `${this.endpoint}/models/${model}:generateContent?key=${this.apiKey}`;
     const payload = {
       contents: [
         {
@@ -108,18 +126,7 @@ export class GemmaAPIProvider implements AIProvider {
       },
     };
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Gemma API error (${res.status}): ${errText}`);
-    }
-
-    const data = await res.json();
+    const data = await this.executeWithModelFallback(payload);
     const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
     return parseVerificationJson(responseText);
   }

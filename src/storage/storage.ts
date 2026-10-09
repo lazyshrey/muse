@@ -1,8 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Expedition } from '../types';
+import { Expedition, Mission } from '../types';
 
 const STORAGE_KEYS = {
   CURRENT_EXPEDITION: '@muse_current_expedition',
+  CURRENT_MISSION: '@muse_current_mission',
   EXPEDITION_HISTORY: '@muse_expedition_history',
   LIFETIME_XP: '@muse_lifetime_xp',
   SETTINGS: '@muse_settings',
@@ -64,6 +65,24 @@ export async function loadCurrentExpedition(): Promise<Expedition | null> {
   }
 }
 
+export async function saveCurrentMission(mission: Mission | null): Promise<void> {
+  if (!mission) {
+    await removeItem(STORAGE_KEYS.CURRENT_MISSION);
+  } else {
+    await setItem(STORAGE_KEYS.CURRENT_MISSION, JSON.stringify(mission));
+  }
+}
+
+export async function loadCurrentMission(): Promise<Mission | null> {
+  const data = await getItem(STORAGE_KEYS.CURRENT_MISSION);
+  if (!data) return null;
+  try {
+    return JSON.parse(data) as Mission;
+  } catch {
+    return null;
+  }
+}
+
 export async function saveExpeditionToHistory(expedition: Expedition): Promise<void> {
   const history = await loadExpeditionHistory();
   const existingIdx = history.findIndex((h) => h.id === expedition.id);
@@ -76,9 +95,16 @@ export async function saveExpeditionToHistory(expedition: Expedition): Promise<v
   }
   await setItem(STORAGE_KEYS.EXPEDITION_HISTORY, JSON.stringify(updated));
 
-  // Update total lifetime XP
-  const lifetimeXP = await loadLifetimeXP();
-  await saveLifetimeXP(lifetimeXP + expedition.totalXP);
+  // Compute total lifetime XP as sum of all completed runs in history
+  const total = updated.reduce((sum, exp) => sum + (exp.totalXP || 0), 0);
+  await saveLifetimeXP(total);
+}
+
+export async function addLifetimeXP(amount: number): Promise<number> {
+  const current = await loadLifetimeXP();
+  const updated = current + amount;
+  await saveLifetimeXP(updated);
+  return updated;
 }
 
 export async function loadExpeditionHistory(): Promise<Expedition[]> {

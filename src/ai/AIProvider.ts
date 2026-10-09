@@ -62,11 +62,24 @@ export class AIProviderManager implements AIProvider {
 
   async verifyMission(imageBase64OrUri: string, mission: Mission): Promise<Verification> {
     const provider = this.getActiveProvider();
+    if (provider.id === 'fallback') {
+      return await this.fallbackProvider.verifyMission(imageBase64OrUri, mission);
+    }
+
     try {
       return await provider.verifyMission(imageBase64OrUri, mission);
     } catch (error) {
-      console.warn(`[AIProviderManager] Primary provider (${provider.name}) failed, using fallback:`, error);
-      return await this.fallbackProvider.verifyMission(imageBase64OrUri, mission);
+      console.warn(`[AIProviderManager] Primary provider (${provider.name}) failed:`, error);
+      return {
+        success: false,
+        confidence: 0,
+        detectedObject: 'AI Vision Notice',
+        observation: 'Unable to reach the multimodal vision API.',
+        explanation:
+          error instanceof Error
+            ? error.message
+            : 'Please check your internet connection or Google AI Studio key in Settings.',
+      };
     }
   }
 }

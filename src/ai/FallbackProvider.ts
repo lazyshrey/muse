@@ -31,10 +31,10 @@ export class FallbackProvider implements AIProvider {
 
     return {
       success: true,
-      confidence: 0.92,
-      detectedObject: detected,
-      observation: `Captured target object aligned with category: ${mission.category}.`,
-      explanation: `The object satisfies: "${mission.text}". Verified by MUSE on-device heuristics.`,
+      confidence: 0.85,
+      detectedObject: `${detected} (Simulated)`,
+      observation: `[Offline Demo Mode] Photo recorded. For real multimodal vision AI, add your Google AI API key in Settings (⚙️).`,
+      explanation: `Simulated match for "${mission.text}". In real mode, Gemma AI checks actual pixels.`,
     };
   }
 }

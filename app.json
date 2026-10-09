@@ -22,7 +22,11 @@
         "backgroundColor": "#0d1726",
         "foregroundImage": "./assets/icon.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "plugins": [
       [
@@ -36,6 +40,12 @@
     ],
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9c18c265-74a0-4145-b1b2-a78445e31ae0"
+      }
+    },
+    "owner": "shrey_69"
   }
 }

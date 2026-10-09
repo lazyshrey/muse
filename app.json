@@ -1,21 +1,26 @@
 {
   "expo": {
-    "name": "muse",
+    "name": "MUSE",
     "slug": "muse",
+    "scheme": "muse",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#0d1726"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.lazyshrey.muse"
     },
     "android": {
-      "package": "com.anonymous.muse",
+      "package": "com.lazyshrey.muse",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#0d1726",
+        "foregroundImage": "./assets/icon.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -25,7 +30,9 @@
         {
           "cameraPermission": "Allow MUSE to access your camera to scan and verify real-world discoveries."
         }
-      ]
+      ],
+      "react-native-fast-tflite",
+      "expo-font"
     ],
     "web": {
       "favicon": "./assets/favicon.png"

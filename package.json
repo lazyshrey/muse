@@ -1,18 +1,47 @@
 {
   "name": "muse",
   "version": "1.0.0",
+  "description": "Real-world sensory scavenger hunt & outdoor exploration mobile game powered by multimodal AI vision.",
   "main": "index.ts",
+  "author": {
+    "name": "Shrey Jaiswal",
+    "url": "https://github.com/lazyshrey"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/lazyshrey/muse#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lazyshrey/muse.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lazyshrey/muse/issues"
+  },
+  "keywords": [
+    "react-native",
+    "expo",
+    "gemini",
+    "gemma",
+    "multimodal-ai",
+    "computer-vision",
+    "scavenger-hunt",
+    "outdoor-exploration",
+    "gamification",
+    "mobile"
+  ],
   "dependencies": {
     "@expo/metro-runtime": "~57.0.16",
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~57.0.27",
     "expo-camera": "~57.0.6",
+    "expo-font": "~57.0.4",
     "expo-image-manipulator": "~57.0.21",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-fast-tflite": "^3.0.1",
+    "react-native-nitro-modules": "^0.37.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-web": "^0.21.2"
@@ -27,8 +56,8 @@
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "test": "jest"

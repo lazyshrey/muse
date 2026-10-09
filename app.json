@@ -40,12 +40,6 @@
     ],
     "web": {
       "favicon": "./assets/favicon.png"
-    },
-    "extra": {
-      "eas": {
-        "projectId": "9c18c265-74a0-4145-b1b2-a78445e31ae0"
-      }
-    },
-    "owner": "shrey_69"
+    }
   }
 }

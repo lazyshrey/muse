@@ -110,35 +110,35 @@ Most contemporary consumer software optimizes for retention metrics—demanding 
 MUSE separates device camera hardware, local session persistence, and multimodal model verification behind an interchangeable provider interface.
 
 ```mermaid
-graph TD
+flowchart TD
     classDef client fill:#0d1726,stroke:#f5be6c,stroke-width:2px,color:#fff,rx:8px,ry:8px
     classDef ai fill:#1e3a5f,stroke:#4285F4,stroke-width:2px,color:#fff,rx:8px,ry:8px
     classDef storage fill:#241c10,stroke:#e07a44,stroke-width:2px,color:#fff,rx:8px,ry:8px
 
-    subgraph Client ["📱 MUSE Mobile Client (React Native / Expo)"]
-        Home["Minimal Home & Expedition Resume"]:::client
+    subgraph ClientLayer ["MUSE Mobile Client - React Native and Expo"]
+        Home["Minimal Home and Base Camp"]:::client
         HUD["Mission Field HUD"]:::client
-        Camera["Viewfinder & Frame Capture"]:::client
+        Camera["Viewfinder and Frame Capture"]:::client
         Result["Visual Verification Evaluator"]:::client
     end
 
-    subgraph Inference ["🧠 AI Provider Gateway"]
+    subgraph InferenceLayer ["AI Provider Gateway"]
         Manager["AIProviderManager"]:::ai
-        GeminiAPI["GemmaAPIProvider (Gemini Multimodal API)"]:::ai
-        EdgeFallback["FallbackProvider (Offline Touch-Grass Engine)"]:::ai
+        GeminiAPI["GemmaAPIProvider - Multimodal Vision API"]:::ai
+        EdgeFallback["FallbackProvider - Offline Heuristic Engine"]:::ai
     end
 
-    subgraph Storage ["💾 Local Storage Layer"]
-        AsyncStore["AsyncStorage (Expeditions, Settings, Lifetime XP)"]:::storage
+    subgraph StorageLayer ["Local Storage Layer"]
+        AsyncStore["AsyncStorage - Expeditions, Settings, Lifetime XP"]:::storage
     end
 
     Home --> HUD
     HUD --> Camera
-    Camera -->|Base64 JPEG| Result
+    Camera -->|Base64 Frame| Result
     Result --> Manager
     Manager -->|Remote Inference| GeminiAPI
-    Manager -.->|Failover / Offline| EdgeFallback
-    Result -->|Progress & XP| AsyncStore
+    Manager -->|Offline Failover| EdgeFallback
+    Result -->|Progress and XP| AsyncStore
     AsyncStore -->|Resume Quest| Home
 ```
 

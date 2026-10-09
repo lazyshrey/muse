@@ -27,13 +27,12 @@ export const CameraView: React.FC<CameraViewProps> = ({
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
   const cameraRef = useRef<any>(null);
 
-  // Take photo with Expo Camera
   const handleTakePhoto = async () => {
     if (!cameraRef.current || isTakingPhoto) return;
     try {
       setIsTakingPhoto(true);
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.8,
+        quality: 0.85,
         skipProcessing: false,
       });
       if (photo?.uri) {
@@ -46,7 +45,6 @@ export const CameraView: React.FC<CameraViewProps> = ({
     }
   };
 
-  // Web / fallback file picker input handler
   const handleWebFileSelect = (event: any) => {
     const file = event?.target?.files?.[0];
     if (file) {
@@ -61,11 +59,10 @@ export const CameraView: React.FC<CameraViewProps> = ({
     }
   };
 
-  // Permission handling
   if (!permission) {
     return (
       <View style={styles.permissionContainer}>
-        <ActivityIndicator color={THEME.colors.accent} size="large" />
+        <ActivityIndicator color={THEME.colors.primary} size="large" />
       </View>
     );
   }
@@ -74,20 +71,20 @@ export const CameraView: React.FC<CameraViewProps> = ({
     return (
       <View style={styles.permissionContainer}>
         <View style={styles.permissionCard}>
-          <Text style={styles.permissionTag}>PERMISSION REQUIRED</Text>
-          <Text style={styles.permissionTitle}>Optical Sensor Required</Text>
+          <Text style={styles.permissionEmoji}>📸</Text>
+          <Text style={styles.permissionTitle}>Camera Access Needed</Text>
           <Text style={styles.permissionDesc}>
-            MUSE needs camera access to visually analyze and verify discoveries in your physical environment.
+            MUSE needs camera permissions to see your real-world discoveries!
           </Text>
           <TouchableOpacity
             style={styles.permissionButton}
             onPress={requestPermission}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
           >
-            <Text style={styles.permissionButtonText}>ENABLE CAMERA</Text>
+            <Text style={styles.permissionButtonText}>ALLOW CAMERA</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.cancelTextBtn} onPress={onCancel}>
-            <Text style={styles.cancelText}>RETURN TO BRIEFING</Text>
+            <Text style={styles.cancelText}>Back to Quest</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -96,63 +93,75 @@ export const CameraView: React.FC<CameraViewProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Top HUD Bar */}
+      {/* Camera Viewport or Preview */}
+      {capturedUri ? (
+        <View style={styles.previewContainer}>
+          <Image source={{ uri: capturedUri }} style={styles.previewImage as any} resizeMode="cover" />
+          <View style={styles.previewBadge}>
+            <Text style={styles.previewBadgeText}>✨ Target Captured!</Text>
+          </View>
+        </View>
+      ) : Platform.OS === 'web' ? (
+        <View style={styles.webFallbackContainer}>
+          <Text style={styles.webEmoji}>📸</Text>
+          <Text style={styles.webHintTitle}>Camera Capture Station</Text>
+          <Text style={styles.webHintDesc}>
+            Take a photo or upload an image of your discovery from this device.
+          </Text>
+          {typeof document !== 'undefined' && (
+            <label style={styles.webUploadLabel as any}>
+              SELECT / CAPTURE IMAGE
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                style={{ display: 'none' }}
+                onChange={handleWebFileSelect}
+              />
+            </label>
+          )}
+        </View>
+      ) : (
+        <>
+          <ExpoCamera
+            style={styles.camera}
+            ref={cameraRef}
+            facing="back"
+            mode="picture"
+          />
+
+          {/* Sleek Modern Viewfinder Overlay */}
+          <View style={styles.reticleOverlay} pointerEvents="none">
+            <View style={styles.reticleBox}>
+              <View style={[styles.bracket, styles.bracketTL]} />
+              <View style={[styles.bracket, styles.bracketTR]} />
+              <View style={[styles.bracket, styles.bracketBL]} />
+              <View style={[styles.bracket, styles.bracketBR]} />
+
+              <View style={styles.focusRing}>
+                <View style={styles.focusCenterDot} />
+              </View>
+            </View>
+
+            <View style={styles.alignPill}>
+              <Text style={styles.alignText}>SCAN OBJECT IN FRAME</Text>
+            </View>
+          </View>
+        </>
+      )}
+
+      {/* Top Floating Goal Pill */}
       <View style={styles.topHud}>
         <TouchableOpacity style={styles.closeBtn} onPress={onCancel} activeOpacity={0.7}>
-          <Text style={styles.closeBtnText}>✕ ABORT</Text>
+          <Text style={styles.closeBtnText}>✕ Close</Text>
         </TouchableOpacity>
         <View style={styles.targetPill}>
+          <Text style={styles.targetPillIcon}>🎯</Text>
           <Text style={styles.targetPillText} numberOfLines={1}>
-            TARGET: {missionPrompt}
+            {missionPrompt}
           </Text>
         </View>
       </View>
-
-      {/* Main Viewport */}
-      {capturedUri ? (
-        // Preview Screen
-        <View style={styles.previewContainer}>
-          <Image source={{ uri: capturedUri }} style={styles.previewImage as any} resizeMode="cover" />
-          <View style={styles.previewOverlay}>
-            <Text style={styles.previewStatusText}>FRAME CAPTURED // READY TO ANALYZE</Text>
-          </View>
-        </View>
-      ) : (
-        // Live Camera Viewfinder
-        <View style={styles.cameraWrap}>
-          {Platform.OS === 'web' ? (
-            <View style={styles.webFallbackContainer}>
-              <Text style={styles.webHintTitle}>OPTICAL CAPTURE STATION</Text>
-              <Text style={styles.webHintDesc}>
-                Take a photo or upload an image of your discovery from this device.
-              </Text>
-              {typeof document !== 'undefined' && (
-                <label style={styles.webUploadLabel as any}>
-                  SELECT / CAPTURE IMAGE
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    style={{ display: 'none' }}
-                    onChange={handleWebFileSelect}
-                  />
-                </label>
-              )}
-            </View>
-          ) : (
-            <ExpoCamera style={styles.camera} ref={cameraRef} facing="back">
-              {/* HUD Reticle */}
-              <View style={styles.reticleContainer}>
-                <View style={[styles.corner, styles.cornerTL]} />
-                <View style={[styles.corner, styles.cornerTR]} />
-                <View style={[styles.corner, styles.cornerBL]} />
-                <View style={[styles.corner, styles.cornerBR]} />
-                <View style={styles.centerCrosshair} />
-              </View>
-            </ExpoCamera>
-          )}
-        </View>
-      )}
 
       {/* Bottom Controls */}
       <View style={styles.bottomHud}>
@@ -161,17 +170,17 @@ export const CameraView: React.FC<CameraViewProps> = ({
             <TouchableOpacity
               style={styles.retakeButton}
               onPress={() => setCapturedUri(null)}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
             >
-              <Text style={styles.retakeButtonText}>RETAKE</Text>
+              <Text style={styles.retakeButtonText}>🔄 Retake</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.usePhotoButton}
               onPress={() => onCapture(capturedUri)}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
             >
-              <Text style={styles.usePhotoButtonText}>VERIFY DISCOVERY</Text>
+              <Text style={styles.usePhotoButtonText}>Verify Target ✨</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -181,7 +190,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
                 style={styles.shutterOuter}
                 onPress={handleTakePhoto}
                 disabled={isTakingPhoto}
-                activeOpacity={0.8}
+                activeOpacity={0.85}
               >
                 <View style={styles.shutterInner} />
               </TouchableOpacity>
@@ -206,29 +215,24 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   permissionCard: {
-    backgroundColor: THEME.colors.surface,
-    padding: 24,
-    borderRadius: 20,
-    borderWidth: 1,
+    backgroundColor: THEME.colors.surfaceCard,
+    padding: 28,
+    borderRadius: 28,
+    borderWidth: 2,
     borderColor: THEME.colors.border,
     alignItems: 'center',
-    maxWidth: 380,
+    maxWidth: 340,
     width: '100%',
   },
-  permissionTag: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 10,
-    fontWeight: '800',
-    color: THEME.colors.warning,
-    letterSpacing: 1,
-    marginBottom: 10,
+  permissionEmoji: {
+    fontSize: 48,
+    marginBottom: 12,
   },
   permissionTitle: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: '900',
     color: THEME.colors.textPrimary,
     marginBottom: 8,
-    textAlign: 'center',
   },
   permissionDesc: {
     fontSize: 13,
@@ -238,27 +242,24 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   permissionButton: {
-    backgroundColor: THEME.colors.accent,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
+    backgroundColor: THEME.colors.primary,
+    paddingVertical: 16,
+    borderRadius: 18,
     width: '100%',
     alignItems: 'center',
+    borderBottomWidth: 4,
+    borderBottomColor: THEME.colors.primaryDark,
   },
   permissionButtonText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#09090b',
-    letterSpacing: 1,
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#ffffff',
   },
   cancelTextBtn: {
     marginTop: 14,
-    paddingVertical: 6,
   },
   cancelText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 11,
+    fontSize: 13,
     color: THEME.colors.textMuted,
   },
   topHud: {
@@ -269,153 +270,183 @@ const styles = StyleSheet.create({
     zIndex: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   closeBtn: {
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(23, 26, 48, 0.85)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: THEME.colors.borderHighlight,
   },
   closeBtnText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#ffffff',
   },
   targetPill: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(23, 26, 48, 0.85)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: THEME.colors.borderHighlight,
+  },
+  targetPillIcon: {
+    fontSize: 14,
   },
   targetPillText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 10,
-    color: THEME.colors.accentLight,
+    fontSize: 12,
+    fontWeight: '800',
+    color: THEME.colors.secondary,
+    flex: 1,
   },
   cameraWrap: {
     flex: 1,
   },
   camera: {
     flex: 1,
+    width: '100%',
+    height: '100%',
   },
   webFallbackContainer: {
     flex: 1,
-    backgroundColor: '#121216',
+    backgroundColor: THEME.colors.surfaceCard,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 30,
   },
+  webEmoji: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
   webHintTitle: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 14,
-    fontWeight: '800',
-    color: THEME.colors.accentLight,
-    letterSpacing: 1,
+    fontSize: 18,
+    fontWeight: '900',
+    color: THEME.colors.textPrimary,
     marginBottom: 8,
   },
   webHintDesc: {
     fontSize: 13,
     color: THEME.colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 24,
-    maxWidth: 320,
+    marginBottom: 20,
   },
   webUploadLabel: {
-    backgroundColor: THEME.colors.accent,
+    backgroundColor: THEME.colors.primary,
+    color: '#ffffff',
     paddingVertical: 14,
     paddingHorizontal: 24,
-    borderRadius: 12,
-    letterSpacing: 1,
+    borderRadius: 16,
+    fontWeight: 'bold',
   } as any,
-  reticleContainer: {
-    position: 'absolute',
-    top: '25%',
-    left: '12%',
-    right: '12%',
-    bottom: '25%',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+  reticleOverlay: {
+    ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  centerCrosshair: {
-    width: 20,
-    height: 20,
-    borderWidth: 1,
-    borderColor: THEME.colors.accentLight,
-    borderRadius: 10,
-    opacity: 0.8,
+  reticleBox: {
+    width: '74%',
+    height: '48%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
   },
-  corner: {
+  bracket: {
     position: 'absolute',
-    width: 16,
-    height: 16,
-    borderColor: THEME.colors.accent,
+    width: 28,
+    height: 28,
+    borderColor: THEME.colors.cyan,
   },
-  cornerTL: { top: -1, left: -1, borderTopWidth: 2, borderLeftWidth: 2 },
-  cornerTR: { top: -1, right: -1, borderTopWidth: 2, borderRightWidth: 2 },
-  cornerBL: { bottom: -1, left: -1, borderBottomWidth: 2, borderLeftWidth: 2 },
-  cornerBR: { bottom: -1, right: -1, borderBottomWidth: 2, borderRightWidth: 2 },
+  bracketTL: { top: 0, left: 0, borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 16 },
+  bracketTR: { top: 0, right: 0, borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 16 },
+  bracketBL: { bottom: 0, left: 0, borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: 16 },
+  bracketBR: { bottom: 0, right: 0, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 16 },
+  focusRing: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: 'rgba(6, 214, 160, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(6, 214, 160, 0.08)',
+  },
+  focusCenterDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: THEME.colors.cyan,
+  },
+  alignPill: {
+    marginTop: 18,
+    backgroundColor: 'rgba(12, 14, 26, 0.75)',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  alignText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#ffffff',
+    letterSpacing: 1,
+  },
   previewContainer: {
     flex: 1,
-    position: 'relative',
   },
   previewImage: {
     width: '100%',
     height: '100%',
   },
-  previewOverlay: {
+  previewBadge: {
     position: 'absolute',
     bottom: 120,
-    left: 20,
-    right: 20,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(16,185,129,0.3)',
-    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: 'rgba(23, 26, 48, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: THEME.colors.cyan,
   },
-  previewStatusText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 10,
-    fontWeight: '700',
-    color: THEME.colors.accentLight,
-    letterSpacing: 1,
+  previewBadgeText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: THEME.colors.cyan,
   },
   bottomHud: {
     position: 'absolute',
-    bottom: 40,
+    bottom: Platform.OS === 'android' ? 55 : 40,
     left: 20,
     right: 20,
     alignItems: 'center',
-    justifyContent: 'center',
+    zIndex: 10,
   },
   shutterRow: {
     alignItems: 'center',
   },
   shutterOuter: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    borderWidth: 4,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    borderWidth: 5,
     borderColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   shutterInner: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#ffffff',
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    backgroundColor: THEME.colors.primary,
   },
   confirmRow: {
     flexDirection: 'row',
@@ -424,32 +455,30 @@ const styles = StyleSheet.create({
   },
   retakeButton: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingVertical: 16,
-    borderRadius: 14,
+    backgroundColor: THEME.colors.surfaceCard,
+    paddingVertical: 18,
+    borderRadius: 20,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 2,
+    borderColor: THEME.colors.borderHighlight,
   },
   retakeButtonText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '800',
     color: '#ffffff',
-    letterSpacing: 1,
   },
   usePhotoButton: {
     flex: 1.4,
-    backgroundColor: THEME.colors.accent,
-    paddingVertical: 16,
-    borderRadius: 14,
+    backgroundColor: THEME.colors.cyan,
+    paddingVertical: 18,
+    borderRadius: 20,
     alignItems: 'center',
+    borderBottomWidth: 5,
+    borderBottomColor: THEME.colors.cyanDark,
   },
   usePhotoButtonText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: '900',
-    color: '#09090b',
-    letterSpacing: 1,
+    color: '#0c0e1a',
   },
 });

@@ -1,35 +1,36 @@
-import { Platform } from 'react-native';
-
 export const THEME = {
   colors: {
-    bg: '#09090b',
-    surface: '#121216',
-    surfaceElevated: '#1a1a22',
-    border: '#27272a',
-    borderHighlight: '#3f3f46',
-    
-    // Emerald phosphor accent
-    accent: '#10b981',
-    accentLight: '#34d399',
-    accentMuted: 'rgba(16, 185, 129, 0.15)',
-    accentBorder: 'rgba(16, 185, 129, 0.3)',
+    bg: '#0d1726',
+    bgGradientTop: '#162a45',
+    surface: '#132238',
+    surfaceElevated: '#1c2f4a',
+    surfaceCard: '#162840',
+    border: '#233a59',
+    borderHighlight: '#e59850',
 
-    // Alerts
-    warning: '#f59e0b',
-    warningMuted: 'rgba(245, 158, 11, 0.15)',
-    danger: '#f43f5e',
-    dangerMuted: 'rgba(244, 63, 94, 0.15)',
+    // Cinematic Sunset & Twilight Accents
+    primary: '#e07a44',          // Warm Sunset Amber / Terracotta
+    primaryDark: '#b85928',
+    secondary: '#f5be6c',        // Golden Hour Sun Glow
+    secondaryDark: '#c8923a',
+    ivory: '#fbf5eb',            // Signature Warm Cream Pill Button
+    ivoryText: '#101c2b',        // Deep Contrast Text on Ivory
+    cyan: '#56b4d3',             // Twilight Sky Teal
+    cyanDark: '#3b8ba6',
+    purple: '#7b70c2',           // Dusk Lavender
+    purpleDark: '#594f9e',
+    blue: '#3b77ba',             // Twilight Horizon Blue
+    blueDark: '#27558a',
 
-    // Text hierarchy
-    textPrimary: '#f4f4f5',
-    textSecondary: '#a1a1aa',
-    textMuted: '#71717a',
-  },
-  fonts: {
-    mono: Platform.select({
-      ios: 'Menlo',
-      android: 'monospace',
-      default: 'monospace',
-    }),
+    // Status
+    success: '#52b788',          // Nature Sage
+    warning: '#f5be6c',
+    danger: '#e05a5a',
+
+    // Text
+    textPrimary: '#f8fafc',
+    textSecondary: '#cbd5e1',
+    textMuted: '#7e92ab',
+    textHighlight: '#fcd385',
   },
 };

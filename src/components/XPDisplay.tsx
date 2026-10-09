@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { THEME } from '../utils/theme';
 
 interface XPDisplayProps {
@@ -13,25 +13,51 @@ export const XPDisplay: React.FC<XPDisplayProps> = ({
   totalXP,
   missionNumber,
   difficulty,
-  providerName = 'GEMMA 4',
 }) => {
+  const bounceAnim = useRef(new Animated.Value(1)).current;
+
+  // Small celebratory bounce whenever XP changes
+  useEffect(() => {
+    Animated.sequence([
+      Animated.timing(bounceAnim, {
+        toValue: 1.15,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+      Animated.spring(bounceAnim, {
+        toValue: 1,
+        friction: 4,
+        tension: 80,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [totalXP]);
+
+  const difficultyStars = '⭐'.repeat(difficulty);
+
   return (
     <View style={styles.container}>
-      <View style={styles.leftGroup}>
-        <View style={styles.radarDot} />
-        <Text style={styles.missionText}>
-          EXPEDITION // M-{missionNumber.toString().padStart(2, '0')}
-        </Text>
+      {/* Quest badge */}
+      <View style={styles.questPill}>
+        <Text style={styles.questIcon}>🎯</Text>
+        <Text style={styles.questText}>Quest #{missionNumber}</Text>
       </View>
 
-      <View style={styles.rightGroup}>
-        <View style={styles.diffBadge}>
-          <Text style={styles.diffText}>LVL {difficulty}</Text>
-        </View>
-        <View style={styles.xpBadge}>
-          <Text style={styles.xpText}>+{totalXP} XP</Text>
-        </View>
+      {/* Difficulty badge */}
+      <View style={styles.difficultyPill}>
+        <Text style={styles.difficultyStars}>{difficultyStars}</Text>
       </View>
+
+      {/* Animated XP badge */}
+      <Animated.View
+        style={[
+          styles.xpPill,
+          { transform: [{ scale: bounceAnim }] },
+        ]}
+      >
+        <Text style={styles.xpCoin}>🪙</Text>
+        <Text style={styles.xpText}>{totalXP} XP</Text>
+      </Animated.View>
     </View>
   );
 };
@@ -41,63 +67,64 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical: 10,
     backgroundColor: THEME.colors.surface,
-    borderRadius: 14,
-    borderWidth: 1,
+    borderRadius: 20,
+    borderWidth: 1.5,
     borderColor: THEME.colors.border,
     marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  leftGroup: {
+  questPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  radarDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: THEME.colors.accent,
-  },
-  missionText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 11,
-    letterSpacing: 1,
-    color: THEME.colors.textSecondary,
-    textTransform: 'uppercase',
-  },
-  rightGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  diffBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    gap: 6,
     backgroundColor: THEME.colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
-  },
-  diffText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 10,
-    fontWeight: '700',
-    color: THEME.colors.textMuted,
-  },
-  xpBadge: {
     paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 8,
-    backgroundColor: THEME.colors.accentMuted,
+    paddingVertical: 6,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: THEME.colors.accentBorder,
+    borderColor: THEME.colors.borderHighlight,
+  },
+  questIcon: {
+    fontSize: 14,
+  },
+  questText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: THEME.colors.textPrimary,
+  },
+  difficultyPill: {
+    backgroundColor: THEME.colors.surfaceElevated,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  difficultyStars: {
+    fontSize: 12,
+  },
+  xpPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#302611',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: THEME.colors.secondary,
+  },
+  xpCoin: {
+    fontSize: 14,
   },
   xpText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 12,
-    fontWeight: '800',
-    color: THEME.colors.accentLight,
+    fontSize: 13,
+    fontWeight: '900',
+    color: THEME.colors.secondary,
   },
 });

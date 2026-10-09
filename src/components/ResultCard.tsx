@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Animated } from 'react-native';
 import { Mission, Verification } from '../types';
 import { THEME } from '../utils/theme';
 
@@ -10,6 +10,7 @@ interface ResultCardProps {
   photoUri?: string;
   onNextMission: () => void;
   onRetry: () => void;
+  onPauseExpedition: () => void;
   onFinishExpedition: () => void;
 }
 
@@ -20,112 +21,137 @@ export const ResultCard: React.FC<ResultCardProps> = ({
   photoUri,
   onNextMission,
   onRetry,
+  onPauseExpedition,
   onFinishExpedition,
 }) => {
   const isSuccess = verification.success;
+  const bounceAnim = useRef(new Animated.Value(0.3)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(bounceAnim, {
+        toValue: 1,
+        friction: 5,
+        tension: 80,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 350,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   return (
     <View style={styles.card}>
-      {/* Header Badge */}
-      <View style={styles.header}>
-        <View
+      {/* Success Celebration Trophy or Miss Banner */}
+      {isSuccess ? (
+        <View style={styles.trophyBanner}>
+          <Image
+            source={require('../../assets/victory_trophy.jpg')}
+            style={styles.trophyImage}
+            resizeMode="cover"
+          />
+          <View style={styles.bannerTag}>
+            <Text style={styles.bannerTagText}>🎉 MISSION COMPLETE! 🎉</Text>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.retryBanner}>
+          <Text style={styles.retryEmoji}>🧐</Text>
+          <Text style={styles.retryTitle}>Not Quite A Match!</Text>
+          <Text style={styles.retrySub}>The AI spotted something else. Let's try again!</Text>
+        </View>
+      )}
+
+      {/* Floating Animated XP Pop */}
+      {isSuccess && (
+        <Animated.View
           style={[
-            styles.statusBadge,
-            isSuccess ? styles.statusBadgeSuccess : styles.statusBadgeFail,
+            styles.xpPopBadge,
+            {
+              transform: [{ scale: bounceAnim }],
+              opacity: fadeAnim,
+            },
           ]}
         >
-          <View
-            style={[
-              styles.statusDot,
-              isSuccess ? styles.statusDotSuccess : styles.statusDotFail,
-            ]}
-          />
-          <Text
-            style={[
-              styles.statusText,
-              isSuccess ? styles.statusTextSuccess : styles.statusTextFail,
-            ]}
-          >
-            {isSuccess ? 'MISSION COMPLETE // VERIFIED' : 'CALIBRATION MISMATCH'}
-          </Text>
-        </View>
+          <Text style={styles.xpPopText}>⭐ +{xpEarned} XP AWARDED! ⭐</Text>
+        </Animated.View>
+      )}
 
-        {isSuccess && (
-          <View style={styles.xpPill}>
-            <Text style={styles.xpPillText}>+{xpEarned} XP</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Captured Photo Thumbnail */}
+      {/* Captured Photo */}
       {photoUri && (
-        <View style={styles.imageContainer}>
-          <Image source={{ uri: photoUri }} style={styles.thumbnail} resizeMode="cover" />
-          <View style={styles.imageOverlay}>
-            <Text style={styles.imageTag}>GEMMA 4 SCAN</Text>
+        <View style={styles.photoContainer}>
+          <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
+          <View style={styles.photoLabel}>
+            <Text style={styles.photoLabelText}>Your Discovery</Text>
           </View>
         </View>
       )}
 
-      {/* Content Section */}
-      <View style={styles.contentWrap}>
-        <View style={styles.sectionBlock}>
-          <Text style={styles.label}>AI DETECTED OBJECT</Text>
-          <Text style={styles.detectedTitle}>{verification.detectedObject}</Text>
+      {/* Discovery Details */}
+      <View style={styles.detailsBox}>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>WHAT AI SPOTTED</Text>
+          <Text style={styles.detectedObject}>{verification.detectedObject}</Text>
         </View>
 
-        <View style={styles.sectionBlock}>
-          <Text style={styles.label}>
-            {isSuccess ? 'WHY IT COUNTS' : 'AI OBSERVATION'}
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>
+            {isSuccess ? 'WHY THIS WINS' : 'WHAT HAPPENED'}
           </Text>
-          <Text style={styles.explanationText}>{verification.explanation}</Text>
-        </View>
-
-        {/* Confidence metric */}
-        <View style={styles.metricRow}>
-          <Text style={styles.metricLabel}>VERIFICATION CONFIDENCE</Text>
-          <Text style={styles.metricValue}>
-            {(verification.confidence * 100).toFixed(0)}%
-          </Text>
+          <Text style={styles.explanation}>{verification.explanation}</Text>
         </View>
       </View>
 
-      {/* Action Buttons */}
+      {/* 3D Action Buttons */}
       <View style={styles.actionRow}>
         {isSuccess ? (
           <>
             <TouchableOpacity
-              style={styles.primarySuccessBtn}
+              style={styles.nextQuestBtn}
               onPress={onNextMission}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
             >
-              <Text style={styles.primarySuccessBtnText}>NEXT MISSION ▶</Text>
+              <Text style={styles.nextQuestText}>NEXT QUEST 🚀</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.secondaryBtn}
+              style={styles.summaryBtn}
+              onPress={onPauseExpedition}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.summaryBtnText}>💾 Save Progress & Base Camp</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.summaryBtn, { marginTop: -4 }]}
               onPress={onFinishExpedition}
               activeOpacity={0.7}
             >
-              <Text style={styles.secondaryBtnText}>END EXPEDITION & REVIEW</Text>
+              <Text style={[styles.summaryBtnText, { color: THEME.colors.textMuted }]}>
+                End Expedition & View Report 🏆
+              </Text>
             </TouchableOpacity>
           </>
         ) : (
           <>
             <TouchableOpacity
-              style={styles.retryBtn}
+              style={styles.tryAgainBtn}
               onPress={onRetry}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
             >
-              <Text style={styles.retryBtnText}>TRY AGAIN // RE-SCAN</Text>
+              <Text style={styles.tryAgainText}>📸 TRY ANOTHER SHOT</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.secondaryBtn}
-              onPress={onFinishExpedition}
+              style={styles.summaryBtn}
+              onPress={onPauseExpedition}
               activeOpacity={0.7}
             >
-              <Text style={styles.secondaryBtnText}>ABORT EXPEDITION</Text>
+              <Text style={styles.summaryBtnText}>💾 Save Progress & Base Camp</Text>
             </TouchableOpacity>
           </>
         )}
@@ -136,9 +162,9 @@ export const ResultCard: React.FC<ResultCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: THEME.colors.surface,
-    borderRadius: 20,
-    borderWidth: 1,
+    backgroundColor: THEME.colors.surfaceCard,
+    borderRadius: 28,
+    borderWidth: 2,
     borderColor: THEME.colors.border,
     padding: 24,
     shadowColor: '#000',
@@ -147,182 +173,176 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  trophyBanner: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  trophyImage: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 3,
+    borderColor: THEME.colors.secondary,
+    marginBottom: 12,
+  },
+  bannerTag: {
+    backgroundColor: '#302511',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: THEME.colors.secondary,
+  },
+  bannerTagText: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: THEME.colors.secondary,
+    letterSpacing: 0.5,
+  },
+  retryBanner: {
+    alignItems: 'center',
+    paddingVertical: 14,
+    marginBottom: 16,
+  },
+  retryEmoji: {
+    fontSize: 48,
+    marginBottom: 8,
+  },
+  retryTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: THEME.colors.textPrimary,
+    marginBottom: 4,
+  },
+  retrySub: {
+    fontSize: 13,
+    color: THEME.colors.textMuted,
+    textAlign: 'center',
+  },
+  xpPopBadge: {
+    backgroundColor: THEME.colors.cyan,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 18,
     alignItems: 'center',
     marginBottom: 20,
+    borderBottomWidth: 4,
+    borderBottomColor: THEME.colors.cyanDark,
+    shadowColor: THEME.colors.cyan,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 6,
   },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 8,
+  xpPopText: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#0c0e1a',
+    letterSpacing: 0.5,
   },
-  statusBadgeSuccess: {
-    backgroundColor: THEME.colors.accentMuted,
-    borderColor: THEME.colors.accentBorder,
-  },
-  statusBadgeFail: {
-    backgroundColor: THEME.colors.dangerMuted,
-    borderColor: 'rgba(244, 63, 94, 0.3)',
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  statusDotSuccess: {
-    backgroundColor: THEME.colors.accent,
-  },
-  statusDotFail: {
-    backgroundColor: THEME.colors.danger,
-  },
-  statusText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-  },
-  statusTextSuccess: {
-    color: THEME.colors.accentLight,
-  },
-  statusTextFail: {
-    color: THEME.colors.danger,
-  },
-  xpPill: {
-    backgroundColor: THEME.colors.surfaceElevated,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: THEME.colors.accentBorder,
-  },
-  xpPillText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 12,
-    fontWeight: '800',
-    color: THEME.colors.accentLight,
-  },
-  imageContainer: {
-    height: 180,
-    borderRadius: 14,
+  photoContainer: {
+    height: 160,
+    borderRadius: 20,
     overflow: 'hidden',
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
+    marginBottom: 18,
+    borderWidth: 1.5,
+    borderColor: THEME.colors.borderHighlight,
     position: 'relative',
   },
-  thumbnail: {
+  photo: {
     width: '100%',
     height: '100%',
   },
-  imageOverlay: {
+  photoLabel: {
     position: 'absolute',
     bottom: 8,
     left: 8,
     backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 10,
   },
-  imageTag: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 9,
-    fontWeight: '700',
-    color: THEME.colors.accentLight,
-    letterSpacing: 0.5,
-  },
-  contentWrap: {
-    gap: 16,
-    marginBottom: 24,
-  },
-  sectionBlock: {
-    gap: 4,
-  },
-  label: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 10,
-    fontWeight: '700',
-    color: THEME.colors.textMuted,
-    letterSpacing: 1,
-  },
-  detectedTitle: {
-    fontSize: 22,
+  photoLabelText: {
+    fontSize: 11,
     fontWeight: '800',
+    color: '#ffffff',
+  },
+  detailsBox: {
+    backgroundColor: THEME.colors.surfaceElevated,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: THEME.colors.borderHighlight,
+    gap: 12,
+    marginBottom: 22,
+  },
+  detailRow: {
+    gap: 2,
+  },
+  detailLabel: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: THEME.colors.secondary,
+    letterSpacing: 0.8,
+  },
+  detectedObject: {
+    fontSize: 20,
+    fontWeight: '900',
     color: THEME.colors.textPrimary,
-    letterSpacing: -0.3,
   },
-  explanationText: {
-    fontSize: 14,
-    lineHeight: 22,
-    color: THEME.colors.textSecondary,
-  },
-  metricRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: THEME.colors.border,
-  },
-  metricLabel: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 10,
-    color: THEME.colors.textMuted,
-  },
-  metricValue: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 12,
-    fontWeight: '800',
+  explanation: {
+    fontSize: 13,
+    lineHeight: 19,
     color: THEME.colors.textSecondary,
   },
   actionRow: {
     gap: 12,
   },
-  primarySuccessBtn: {
-    backgroundColor: THEME.colors.accent,
-    paddingVertical: 16,
-    borderRadius: 14,
+  nextQuestBtn: {
+    backgroundColor: THEME.colors.cyan,
+    paddingVertical: 18,
+    borderRadius: 20,
     alignItems: 'center',
-    shadowColor: THEME.colors.accent,
+    borderBottomWidth: 5,
+    borderBottomColor: THEME.colors.cyanDark,
+    shadowColor: THEME.colors.cyan,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.4,
     shadowRadius: 10,
-    elevation: 4,
+    elevation: 6,
   },
-  primarySuccessBtnText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 13,
+  nextQuestText: {
+    fontSize: 16,
     fontWeight: '900',
-    color: '#09090b',
-    letterSpacing: 1,
+    color: '#0c0e1a',
+    letterSpacing: 0.8,
   },
-  retryBtn: {
-    backgroundColor: THEME.colors.warning,
-    paddingVertical: 16,
-    borderRadius: 14,
+  tryAgainBtn: {
+    backgroundColor: THEME.colors.primary,
+    paddingVertical: 18,
+    borderRadius: 20,
+    alignItems: 'center',
+    borderBottomWidth: 5,
+    borderBottomColor: THEME.colors.primaryDark,
+    shadowColor: THEME.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  tryAgainText: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#ffffff',
+    letterSpacing: 0.8,
+  },
+  summaryBtn: {
+    paddingVertical: 10,
     alignItems: 'center',
   },
-  retryBtnText: {
-    fontFamily: THEME.fonts.mono,
+  summaryBtnText: {
     fontSize: 13,
-    fontWeight: '900',
-    color: '#09090b',
-    letterSpacing: 1,
-  },
-  secondaryBtn: {
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  secondaryBtnText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 11,
     fontWeight: '700',
     color: THEME.colors.textMuted,
-    letterSpacing: 1,
   },
 });

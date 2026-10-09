@@ -6,96 +6,115 @@ import { THEME } from '../utils/theme';
 interface MissionCardProps {
   mission: Mission;
   onOpenCamera: () => void;
-  onEndExpedition: () => void;
+  onPauseExpedition: () => void;
+  onFinishExpedition?: () => void;
   isGenerating?: boolean;
 }
 
 export const MissionCard: React.FC<MissionCardProps> = ({
   mission,
   onOpenCamera,
-  onEndExpedition,
+  onPauseExpedition,
+  onFinishExpedition,
   isGenerating = false,
 }) => {
   const [showHint, setShowHint] = useState(false);
 
-  const categoryLabels: Record<string, string> = {
-    object: 'PHYSICAL OBJECT',
-    structure: 'STRUCTURAL ELEMENT',
-    nature: 'NATURAL ARTIFACT',
-    color: 'CHROMATIC FOCUS',
-    shape: 'GEOMETRIC FORM',
-    reflection: 'SPECULAR SURFACE',
-    'human-made': 'MANUFACTURED ELEMENT',
-    environment: 'ENVIRONMENTAL PATTERN',
+  const categoryMeta: Record<string, { label: string; icon: string; color: string }> = {
+    object: { label: 'Scavenger Hunt', icon: '🎒', color: THEME.colors.primary },
+    structure: { label: 'Architecture & Places', icon: '🏛️', color: THEME.colors.blue },
+    nature: { label: 'Nature & Wildlife', icon: '🌿', color: THEME.colors.cyan },
+    color: { label: 'Color Hunt', icon: '🎨', color: '#ff70a6' },
+    shape: { label: 'Shape Spotter', icon: '📐', color: THEME.colors.purple },
+    reflection: { label: 'Specular Magic', icon: '✨', color: THEME.colors.secondary },
+    'human-made': { label: 'Human Craft', icon: '🛠️', color: THEME.colors.primary },
+    environment: { label: 'Outdoor World', icon: '🏞️', color: THEME.colors.cyan },
+  };
+
+  const meta = categoryMeta[mission.category] || {
+    label: 'Secret Mission',
+    icon: '🔮',
+    color: THEME.colors.secondary,
   };
 
   return (
     <View style={styles.card}>
-      {/* Category Header */}
-      <View style={styles.header}>
-        <View style={styles.categoryBadge}>
-          <Text style={styles.categoryText}>
-            {categoryLabels[mission.category] || mission.category.toUpperCase()}
-          </Text>
+      {/* Playful Top Badge */}
+      <View style={styles.topRow}>
+        <View style={[styles.badge, { backgroundColor: meta.color + '25', borderColor: meta.color }]}>
+          <Text style={styles.badgeIcon}>{meta.icon}</Text>
+          <Text style={[styles.badgeText, { color: meta.color }]}>{meta.label}</Text>
         </View>
-        <Text style={styles.idLabel}>ID // {mission.id.slice(-6)}</Text>
+
+        <View style={styles.difficultyTag}>
+          <Text style={styles.difficultyText}>Level {mission.difficulty}</Text>
+        </View>
       </View>
 
-      {/* Primary Mission Prompt */}
-      <View style={styles.promptContainer}>
-        <Text style={styles.missionQuote}>“</Text>
+      {/* Main Mission Text */}
+      <View style={styles.textContainer}>
+        <Text style={styles.questLabel}>YOUR ACTIVE QUEST</Text>
         <Text style={styles.missionText}>{mission.text}</Text>
       </View>
 
-      {/* Field Directive Note */}
-      <View style={styles.directiveBox}>
-        <View style={styles.directiveIcon}>
-          <Text style={styles.glyphText}>🌿</Text>
-        </View>
-        <View style={styles.directiveTextWrap}>
-          <Text style={styles.directiveTitle}>FIELD DIRECTIVE</Text>
-          <Text style={styles.directiveBody}>
-            Put your phone away. Walk and observe your physical environment. Return only when you have discovered your target.
+      {/* Touch Grass Field Reminder */}
+      <View style={styles.touchGrassBox}>
+        <Text style={styles.touchGrassIcon}>🌱</Text>
+        <View style={styles.touchGrassContent}>
+          <Text style={styles.touchGrassTitle}>Real-World Objective</Text>
+          <Text style={styles.touchGrassDesc}>
+            Pocket your phone and wander around! Return once you find a match in the wild.
           </Text>
         </View>
       </View>
 
-      {/* Expandable Hint */}
+      {/* Playful Hint Accordion */}
       <TouchableOpacity
-        style={styles.hintToggle}
+        style={styles.hintButton}
         onPress={() => setShowHint(!showHint)}
         activeOpacity={0.7}
       >
-        <Text style={styles.hintToggleText}>
-          {showHint ? '▼ HIDE FIELD HINT' : '▶ REVEAL FIELD HINT'}
+        <Text style={styles.hintButtonText}>
+          {showHint ? '🙈 Hide Explorer Hint' : '💡 Need an Explorer Hint?'}
         </Text>
       </TouchableOpacity>
 
       {showHint && (
-        <View style={styles.hintContent}>
+        <View style={styles.hintContainer}>
           <Text style={styles.hintText}>{mission.verificationHint}</Text>
         </View>
       )}
 
-      {/* Actions */}
-      <View style={styles.actionRow}>
+      {/* 3D Tactile Buttons */}
+      <View style={styles.actions}>
         <TouchableOpacity
-          style={styles.cameraButton}
+          style={styles.snapButton}
           onPress={onOpenCamera}
           disabled={isGenerating}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
         >
-          <View style={styles.cameraIconDot} />
-          <Text style={styles.cameraButtonText}>OPEN CAMERA // SCAN</Text>
+          <Text style={styles.snapButtonText}>📸 SNAP PHOTO & VERIFY</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.endButton}
-          onPress={onEndExpedition}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.endButtonText}>FINISH EXPEDITION</Text>
-        </TouchableOpacity>
+        <View style={styles.secondaryActionsRow}>
+          <TouchableOpacity
+            style={styles.pauseButton}
+            onPress={onPauseExpedition}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.pauseButtonText}>💾 Pause & Save Progress</Text>
+          </TouchableOpacity>
+
+          {onFinishExpedition && (
+            <TouchableOpacity
+              style={styles.finishButton}
+              onPress={onFinishExpedition}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.finishButtonText}>🏁 Complete Hunt</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -103,9 +122,9 @@ export const MissionCard: React.FC<MissionCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: THEME.colors.surface,
-    borderRadius: 20,
-    borderWidth: 1,
+    backgroundColor: THEME.colors.surfaceCard,
+    borderRadius: 28,
+    borderWidth: 2,
     borderColor: THEME.colors.border,
     padding: 24,
     shadowColor: '#000',
@@ -114,106 +133,101 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
   },
-  header: {
+  topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
   },
-  categoryBadge: {
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1.5,
+  },
+  badgeIcon: {
+    fontSize: 14,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  difficultyTag: {
     backgroundColor: THEME.colors.surfaceElevated,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: THEME.colors.borderHighlight,
+    borderRadius: 12,
   },
-  categoryText: {
-    fontFamily: THEME.fonts.mono,
+  difficultyText: {
     fontSize: 11,
     fontWeight: '700',
-    color: THEME.colors.accentLight,
-    letterSpacing: 0.8,
-  },
-  idLabel: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 10,
     color: THEME.colors.textMuted,
   },
-  promptContainer: {
-    marginBottom: 24,
-    position: 'relative',
-    paddingLeft: 4,
+  textContainer: {
+    marginBottom: 20,
   },
-  missionQuote: {
-    position: 'absolute',
-    top: -20,
-    left: -8,
-    fontSize: 48,
-    color: THEME.colors.borderHighlight,
-    fontFamily: THEME.fonts.mono,
+  questLabel: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: THEME.colors.secondary,
+    letterSpacing: 1,
+    marginBottom: 8,
   },
   missionText: {
     fontSize: 26,
     lineHeight: 34,
-    fontWeight: '800',
+    fontWeight: '900',
     color: THEME.colors.textPrimary,
     letterSpacing: -0.5,
   },
-  directiveBox: {
+  touchGrassBox: {
     flexDirection: 'row',
-    backgroundColor: '#0c1410',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.2)',
+    backgroundColor: '#122521',
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: THEME.colors.cyan + '40',
     padding: 14,
     marginBottom: 16,
     gap: 12,
-  },
-  directiveIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  glyphText: {
-    fontSize: 14,
+  touchGrassIcon: {
+    fontSize: 24,
   },
-  directiveTextWrap: {
+  touchGrassContent: {
     flex: 1,
   },
-  directiveTitle: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 10,
+  touchGrassTitle: {
+    fontSize: 13,
     fontWeight: '800',
-    color: THEME.colors.accentLight,
-    letterSpacing: 1,
+    color: THEME.colors.cyan,
     marginBottom: 2,
   },
-  directiveBody: {
+  touchGrassDesc: {
     fontSize: 12,
     lineHeight: 18,
     color: THEME.colors.textSecondary,
   },
-  hintToggle: {
+  hintButton: {
+    alignSelf: 'flex-start',
     paddingVertical: 8,
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  hintToggleText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 11,
-    fontWeight: '600',
-    color: THEME.colors.textMuted,
-    letterSpacing: 0.5,
+  hintButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: THEME.colors.secondary,
   },
-  hintContent: {
+  hintContainer: {
     backgroundColor: THEME.colors.surfaceElevated,
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: 14,
+    padding: 14,
     borderWidth: 1,
-    borderColor: THEME.colors.border,
+    borderColor: THEME.colors.borderHighlight,
     marginBottom: 16,
   },
   hintText: {
@@ -222,46 +236,54 @@ const styles = StyleSheet.create({
     color: THEME.colors.textSecondary,
     fontStyle: 'italic',
   },
-  actionRow: {
+  actions: {
     gap: 12,
-    marginTop: 8,
+    marginTop: 10,
   },
-  cameraButton: {
-    backgroundColor: THEME.colors.accent,
-    borderRadius: 14,
-    paddingVertical: 16,
-    flexDirection: 'row',
+  snapButton: {
+    backgroundColor: THEME.colors.primary,
+    paddingVertical: 18,
+    borderRadius: 20,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    shadowColor: THEME.colors.accent,
+    borderBottomWidth: 5,
+    borderBottomColor: THEME.colors.primaryDark,
+    shadowColor: THEME.colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.4,
     shadowRadius: 10,
-    elevation: 4,
+    elevation: 6,
   },
-  cameraIconDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#09090b',
-  },
-  cameraButtonText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 13,
+  snapButtonText: {
+    fontSize: 15,
     fontWeight: '900',
-    color: '#09090b',
-    letterSpacing: 1,
+    color: '#ffffff',
+    letterSpacing: 0.8,
   },
-  endButton: {
-    paddingVertical: 12,
+  secondaryActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: 6,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: THEME.colors.border,
   },
-  endButtonText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 11,
+  pauseButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+  },
+  pauseButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: THEME.colors.secondary,
+  },
+  finishButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+  },
+  finishButtonText: {
+    fontSize: 12,
     fontWeight: '600',
     color: THEME.colors.textMuted,
-    letterSpacing: 1,
   },
 });

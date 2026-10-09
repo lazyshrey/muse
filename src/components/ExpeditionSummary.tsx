@@ -22,56 +22,62 @@ export const ExpeditionSummary: React.FC<ExpeditionSummaryProps> = ({
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Complete Banner */}
-      <View style={styles.banner}>
-        <View style={styles.completedTag}>
-          <Text style={styles.completedTagText}>EXPEDITION CONCLUDED</Text>
+      {/* Trophy & Celebration Header */}
+      <View style={styles.header}>
+        <Image
+          source={require('../../assets/victory_trophy.jpg')}
+          style={styles.trophyIcon}
+          resizeMode="cover"
+        />
+        <View style={styles.badgePill}>
+          <Text style={styles.badgeText}>EXPEDITION VICTORY</Text>
         </View>
-        <Text style={styles.title}>Field Report</Text>
+        <Text style={styles.title}>Quest Report</Text>
         <Text style={styles.subtitle}>
-          The physical world was your game board. Here is what you uncovered.
+          You touched grass, explored the real world, and brought back discoveries!
         </Text>
       </View>
 
-      {/* Metrics Row */}
-      <View style={styles.metricGrid}>
-        <View style={styles.metricCard}>
-          <Text style={styles.metricNumber}>{discoveriesCount}</Text>
-          <Text style={styles.metricLabel}>DISCOVERIES</Text>
+      {/* Chunky Colorful Stats Grid */}
+      <View style={styles.statsGrid}>
+        <View style={[styles.statCard, { borderColor: THEME.colors.primary }]}>
+          <Text style={styles.statEmoji}>🔍</Text>
+          <Text style={styles.statNumber}>{discoveriesCount}</Text>
+          <Text style={styles.statLabel}>SPOTTED</Text>
         </View>
 
-        <View style={styles.metricCard}>
-          <Text style={[styles.metricNumber, { color: THEME.colors.accentLight }]}>
+        <View style={[styles.statCard, { borderColor: THEME.colors.secondary }]}>
+          <Text style={styles.statEmoji}>🪙</Text>
+          <Text style={[styles.statNumber, { color: THEME.colors.secondary }]}>
             +{expedition.totalXP}
           </Text>
-          <Text style={styles.metricLabel}>TOTAL XP</Text>
+          <Text style={styles.statLabel}>XP EARNED</Text>
         </View>
 
-        <View style={styles.metricCard}>
-          <Text style={styles.metricNumber}>{durationMinutes}m</Text>
-          <Text style={styles.metricLabel}>EXPEDITION TIME</Text>
+        <View style={[styles.statCard, { borderColor: THEME.colors.cyan }]}>
+          <Text style={styles.statEmoji}>⏱️</Text>
+          <Text style={styles.statNumber}>{durationMinutes}m</Text>
+          <Text style={styles.statLabel}>OUTDOORS</Text>
         </View>
       </View>
 
-      {/* Stretch Feature: Discovery Chain Visualization */}
+      {/* Discovery Chain Sequence */}
       {discoveriesCount > 0 && (
-        <View style={styles.chainSection}>
-          <Text style={styles.sectionHeader}>DISCOVERY CHAIN SEQUENCE</Text>
-          <View style={styles.chainRow}>
+        <View style={styles.chainBox}>
+          <Text style={styles.sectionTitle}>🗺️ YOUR DISCOVERY TRAIL</Text>
+          <View style={styles.chainTrail}>
             {expedition.missions.map((m, idx) => (
               <React.Fragment key={m.mission.id + idx}>
                 <View style={styles.chainNode}>
-                  <View style={styles.chainIconCircle}>
-                    <Text style={styles.chainNumber}>{idx + 1}</Text>
+                  <View style={styles.nodeIcon}>
+                    <Text style={styles.nodeNumber}>{idx + 1}</Text>
                   </View>
-                  <Text style={styles.chainNodeName} numberOfLines={1}>
+                  <Text style={styles.nodeText} numberOfLines={1}>
                     {m.verification.detectedObject}
                   </Text>
                 </View>
                 {idx < expedition.missions.length - 1 && (
-                  <View style={styles.chainArrow}>
-                    <Text style={styles.chainArrowText}>→</Text>
-                  </View>
+                  <Text style={styles.chainArrow}>➔</Text>
                 )}
               </React.Fragment>
             ))}
@@ -79,46 +85,46 @@ export const ExpeditionSummary: React.FC<ExpeditionSummaryProps> = ({
         </View>
       )}
 
-      {/* Discoveries Detailed List */}
+      {/* Discoveries Detailed Cards */}
       <View style={styles.logSection}>
-        <Text style={styles.sectionHeader}>DISCOVERY LOG</Text>
+        <Text style={styles.sectionTitle}>📸 DISCOVERY LOGBOOK</Text>
         {expedition.missions.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>No discoveries recorded in this expedition.</Text>
+            <Text style={styles.emptyText}>No discoveries recorded in this run.</Text>
           </View>
         ) : (
           expedition.missions.map((item, index) => (
-            <View key={item.mission.id + index} style={styles.discoveryCard}>
+            <View key={item.mission.id + index} style={styles.itemCard}>
               {item.photoUri && (
-                <Image source={{ uri: item.photoUri }} style={styles.logImage} resizeMode="cover" />
+                <Image source={{ uri: item.photoUri }} style={styles.itemImage} resizeMode="cover" />
               )}
-              <View style={styles.logInfo}>
-                <View style={styles.logHeader}>
-                  <Text style={styles.logTitle}>{item.verification.detectedObject}</Text>
-                  <View style={styles.logXpPill}>
-                    <Text style={styles.logXpText}>+{item.xpEarned} XP</Text>
+              <View style={styles.itemContent}>
+                <View style={styles.itemTop}>
+                  <Text style={styles.itemTitle}>{item.verification.detectedObject}</Text>
+                  <View style={styles.itemXpTag}>
+                    <Text style={styles.itemXpText}>+{item.xpEarned} XP</Text>
                   </View>
                 </View>
-                <Text style={styles.logMissionText}>“{item.mission.text}”</Text>
-                <Text style={styles.logExplanation}>{item.verification.explanation}</Text>
+                <Text style={styles.itemMissionText}>“{item.mission.text}”</Text>
+                <Text style={styles.itemExplanation}>{item.verification.explanation}</Text>
               </View>
             </View>
           ))
         )}
       </View>
 
-      {/* Action CTAs */}
+      {/* 3D Action Buttons */}
       <View style={styles.actions}>
         <TouchableOpacity
-          style={styles.primaryBtn}
+          style={styles.playAgainBtn}
           onPress={onStartNewExpedition}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
         >
-          <Text style={styles.primaryBtnText}>START NEW EXPEDITION</Text>
+          <Text style={styles.playAgainText}>START NEW EXPEDITION 🚀</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.homeBtn} onPress={onGoHome} activeOpacity={0.7}>
-          <Text style={styles.homeBtnText}>RETURN TO HEADQUARTERS</Text>
+          <Text style={styles.homeBtnText}>Return to Base Camp</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -132,221 +138,221 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 24,
-    paddingTop: 48,
+    paddingTop: 32,
     paddingBottom: 60,
   },
-  banner: {
+  header: {
+    alignItems: 'center',
     marginBottom: 28,
   },
-  completedTag: {
-    alignSelf: 'flex-start',
-    backgroundColor: THEME.colors.accentMuted,
-    borderWidth: 1,
-    borderColor: THEME.colors.accentBorder,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+  trophyIcon: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: THEME.colors.secondary,
     marginBottom: 12,
   },
-  completedTagText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 10,
-    fontWeight: '800',
-    color: THEME.colors.accentLight,
-    letterSpacing: 1,
+  badgePill: {
+    backgroundColor: '#302511',
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: THEME.colors.secondary,
+    marginBottom: 10,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: THEME.colors.secondary,
+    letterSpacing: 0.5,
   },
   title: {
     fontSize: 32,
     fontWeight: '900',
     color: THEME.colors.textPrimary,
-    letterSpacing: -1,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   subtitle: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
     color: THEME.colors.textSecondary,
+    textAlign: 'center',
+    maxWidth: 280,
   },
-  metricGrid: {
+  statsGrid: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 32,
+    marginBottom: 28,
   },
-  metricCard: {
+  statCard: {
     flex: 1,
-    backgroundColor: THEME.colors.surface,
+    backgroundColor: THEME.colors.surfaceCard,
     paddingVertical: 18,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
+    paddingHorizontal: 10,
+    borderRadius: 20,
+    borderWidth: 2,
     alignItems: 'center',
   },
-  metricNumber: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: THEME.colors.textPrimary,
-    fontFamily: THEME.fonts.mono,
+  statEmoji: {
+    fontSize: 20,
     marginBottom: 4,
   },
-  metricLabel: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 9,
-    fontWeight: '700',
+  statNumber: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: THEME.colors.textPrimary,
+    marginBottom: 2,
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: '800',
     color: THEME.colors.textMuted,
     letterSpacing: 0.5,
   },
-  chainSection: {
-    marginBottom: 32,
+  chainBox: {
+    backgroundColor: THEME.colors.surfaceCard,
+    borderRadius: 22,
+    padding: 18,
+    borderWidth: 1.5,
+    borderColor: THEME.colors.border,
+    marginBottom: 28,
   },
-  sectionHeader: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 11,
-    fontWeight: '800',
-    color: THEME.colors.textMuted,
-    letterSpacing: 1,
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: THEME.colors.secondary,
+    letterSpacing: 0.5,
     marginBottom: 14,
   },
-  chainRow: {
+  chainTrail: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
     gap: 8,
-    backgroundColor: THEME.colors.surface,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
   },
   chainNode: {
     alignItems: 'center',
     gap: 4,
     maxWidth: 90,
   },
-  chainIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  nodeIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: THEME.colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: THEME.colors.accentBorder,
+    borderWidth: 1.5,
+    borderColor: THEME.colors.cyan,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chainNumber: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 11,
-    fontWeight: '800',
-    color: THEME.colors.accentLight,
+  nodeNumber: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: THEME.colors.cyan,
   },
-  chainNodeName: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 10,
+  nodeText: {
+    fontSize: 11,
+    fontWeight: '700',
     color: THEME.colors.textSecondary,
     textAlign: 'center',
   },
   chainArrow: {
-    paddingHorizontal: 2,
-  },
-  chainArrowText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 14,
-    color: THEME.colors.textMuted,
+    fontSize: 16,
+    color: THEME.colors.secondary,
+    fontWeight: '900',
   },
   logSection: {
-    marginBottom: 36,
+    marginBottom: 32,
   },
   emptyCard: {
-    backgroundColor: THEME.colors.surface,
+    backgroundColor: THEME.colors.surfaceCard,
     padding: 20,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
+    borderRadius: 18,
     alignItems: 'center',
   },
   emptyText: {
     color: THEME.colors.textMuted,
     fontSize: 13,
   },
-  discoveryCard: {
-    backgroundColor: THEME.colors.surface,
-    borderRadius: 16,
-    borderWidth: 1,
+  itemCard: {
+    backgroundColor: THEME.colors.surfaceCard,
+    borderRadius: 22,
+    borderWidth: 1.5,
     borderColor: THEME.colors.border,
-    marginBottom: 14,
+    marginBottom: 16,
     overflow: 'hidden',
   },
-  logImage: {
+  itemImage: {
     height: 140,
     width: '100%',
   },
-  logInfo: {
+  itemContent: {
     padding: 16,
     gap: 6,
   },
-  logHeader: {
+  itemTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  logTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+  itemTitle: {
+    fontSize: 17,
+    fontWeight: '900',
     color: THEME.colors.textPrimary,
   },
-  logXpPill: {
-    backgroundColor: THEME.colors.accentMuted,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
+  itemXpTag: {
+    backgroundColor: '#302511',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: THEME.colors.secondary,
   },
-  logXpText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 11,
-    fontWeight: '800',
-    color: THEME.colors.accentLight,
-  },
-  logMissionText: {
+  itemXpText: {
     fontSize: 12,
+    fontWeight: '900',
+    color: THEME.colors.secondary,
+  },
+  itemMissionText: {
+    fontSize: 13,
     color: THEME.colors.textMuted,
     fontStyle: 'italic',
   },
-  logExplanation: {
+  itemExplanation: {
     fontSize: 12,
     lineHeight: 18,
     color: THEME.colors.textSecondary,
-    marginTop: 4,
   },
   actions: {
     gap: 12,
   },
-  primaryBtn: {
-    backgroundColor: THEME.colors.accent,
+  playAgainBtn: {
+    backgroundColor: THEME.colors.secondary,
     paddingVertical: 18,
-    borderRadius: 16,
+    borderRadius: 20,
     alignItems: 'center',
-    shadowColor: THEME.colors.accent,
+    borderBottomWidth: 5,
+    borderBottomColor: THEME.colors.secondaryDark,
+    shadowColor: THEME.colors.secondary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.4,
     shadowRadius: 10,
-    elevation: 4,
+    elevation: 6,
   },
-  primaryBtnText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 13,
+  playAgainText: {
+    fontSize: 16,
     fontWeight: '900',
-    color: '#09090b',
-    letterSpacing: 1,
+    color: '#0c0e1a',
+    letterSpacing: 0.5,
   },
   homeBtn: {
-    paddingVertical: 14,
+    paddingVertical: 12,
     alignItems: 'center',
   },
   homeBtnText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: '700',
     color: THEME.colors.textMuted,
-    letterSpacing: 1,
   },
 });

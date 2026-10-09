@@ -8,6 +8,9 @@ import {
   ScrollView,
   StatusBar,
   Platform,
+  Image,
+  ImageBackground,
+  Alert,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
@@ -23,8 +26,12 @@ import { defaultAIProvider } from './src/ai/AIProvider';
 import {
   saveCurrentExpedition,
   loadCurrentExpedition,
+  saveCurrentMission,
+  loadCurrentMission,
   saveExpeditionToHistory,
+  loadExpeditionHistory,
   loadLifetimeXP,
+  addLifetimeXP,
   loadSettings,
   AppSettings,
 } from './src/storage/storage';
@@ -51,7 +58,7 @@ export default function App() {
   } | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState('Generating mission...');
+  const [loadingMessage, setLoadingMessage] = useState('Generating quest...');
   const [lifetimeXP, setLifetimeXP] = useState(0);
   const [settings, setSettings] = useState<AppSettings>({
     preferredProvider: 'auto',
@@ -63,10 +70,13 @@ export default function App() {
   useEffect(() => {
     async function init() {
       const savedSettings = await loadSettings();
-      setSettings(savedSettings);
-      if (savedSettings.apiKey) {
-        defaultAIProvider.setApiKey(savedSettings.apiKey);
+      const envKey = process.env.EXPO_PUBLIC_GEMMA_API_KEY || '';
+      const initialKey = savedSettings.apiKey || envKey;
+      if (initialKey) {
+        defaultAIProvider.setApiKey(initialKey);
+        savedSettings.apiKey = initialKey;
       }
+      setSettings(savedSettings);
       defaultAIProvider.setPreferredMode(savedSettings.preferredProvider);
 
       const savedXp = await loadLifetimeXP();
@@ -75,12 +85,15 @@ export default function App() {
       const savedExpedition = await loadCurrentExpedition();
       if (savedExpedition && !savedExpedition.completedAt) {
         setExpedition(savedExpedition);
+        const savedMission = await loadCurrentMission();
+        if (savedMission) {
+          setMission(savedMission);
+        }
       }
     }
     init();
   }, []);
 
-  // Update AI provider settings
   const handleUpdateSettings = (newSettings: AppSettings) => {
     setSettings(newSettings);
     if (newSettings.apiKey) {
@@ -89,10 +102,9 @@ export default function App() {
     defaultAIProvider.setPreferredMode(newSettings.preferredProvider);
   };
 
-  // Start new expedition (FR-02)
-  const handleStartExpedition = async () => {
+  const startFreshExpedition = async () => {
     setIsLoading(true);
-    setLoadingMessage('Gemma 4 is synthesizing your first challenge...');
+    setLoadingMessage('Gemma is crafting your first challenge...');
     try {
       const newExp = createExpedition();
       setExpedition(newExp);
@@ -105,6 +117,8 @@ export default function App() {
       });
 
       setMission(firstMission);
+      await saveCurrentMission(firstMission);
+      setVerificationResult(null);
       setScreen('MISSION');
     } catch (err) {
       console.warn('Failed to start expedition:', err);
@@ -113,11 +127,54 @@ export default function App() {
     }
   };
 
-  // Resume active expedition if present
+  const handleStartExpedition = async () => {
+    // If there is an active expedition with progress, confirm before overwriting
+    if (expedition && !expedition.completedAt && expedition.missions.length > 0) {
+      Alert.alert(
+        'Active Hunt in Progress',
+        `You currently have a hunt underway with ${expedition.missions.length} discovery${
+          expedition.missions.length > 1 ? 'ies' : ''
+        } and ${expedition.totalXP} XP. Starting a new hunt will archive this run to your history.`,
+        [
+          { text: 'Keep Active Hunt', style: 'cancel' },
+          {
+            text: 'Save & Start New',
+            style: 'destructive',
+            onPress: async () => {
+              const finished = completeExpedition(expedition);
+              await saveExpeditionToHistory(finished);
+              const updatedLifetime = await loadLifetimeXP();
+              setLifetimeXP(updatedLifetime);
+              await startFreshExpedition();
+            },
+          },
+        ]
+      );
+      return;
+    }
+
+    await startFreshExpedition();
+  };
+
   const handleResumeExpedition = async () => {
     if (!expedition) return;
+
+    // Fast-path: If mission already in state or storage, resume instantly without waiting!
+    let activeMission = mission;
+    if (!activeMission) {
+      activeMission = await loadCurrentMission();
+    }
+
+    if (activeMission) {
+      setMission(activeMission);
+      setVerificationResult(null);
+      setScreen('MISSION');
+      return;
+    }
+
+    // Otherwise generate the next chained mission
     setIsLoading(true);
-    setLoadingMessage('Resuming expedition...');
+    setLoadingMessage('Resuming your outdoor hunt...');
     try {
       const diff = calculateNextDifficulty(expedition.missions.length);
       const prevDiscovery =
@@ -133,6 +190,8 @@ export default function App() {
       });
 
       setMission(nextMission);
+      await saveCurrentMission(nextMission);
+      setVerificationResult(null);
       setScreen('MISSION');
     } catch (err) {
       console.warn('Failed to resume expedition:', err);
@@ -141,24 +200,33 @@ export default function App() {
     }
   };
 
-  // Open camera viewfinder (FR-04)
+  const handlePauseAndSave = async () => {
+    if (expedition) {
+      await saveCurrentExpedition(expedition);
+    }
+    if (mission) {
+      await saveCurrentMission(mission);
+    }
+    const xp = await loadLifetimeXP();
+    setLifetimeXP(xp);
+    setVerificationResult(null);
+    setScreen('HOME');
+  };
+
   const handleOpenCamera = () => {
     setScreen('CAMERA');
   };
 
-  // Process captured image and verify (FR-05)
   const handlePhotoCaptured = async (photoUri: string) => {
     if (!mission || !expedition) return;
 
     setScreen('ANALYZING');
-    setLoadingMessage('Gemma 4 is inspecting discovery...');
+    setLoadingMessage('Gemma is checking your target photo...');
 
     try {
-      // Image preprocessing: resize & compress
       const processed = await processImageForAI(photoUri);
       const imagePayload = processed.base64 ? `data:image/jpeg;base64,${processed.base64}` : processed.uri;
 
-      // Multimodal verification
       const verification = await defaultAIProvider.verifyMission(imagePayload, mission);
 
       if (verification.success) {
@@ -170,6 +238,8 @@ export default function App() {
         );
         setExpedition(updatedExpedition);
         await saveCurrentExpedition(updatedExpedition);
+        const newLifetime = await addLifetimeXP(xpEarned);
+        setLifetimeXP(newLifetime);
 
         setVerificationResult({
           verification,
@@ -187,14 +257,13 @@ export default function App() {
       setScreen('RESULT');
     } catch (err) {
       console.warn('Verification error:', err);
-      // Fallback verification if catastrophic error
       setVerificationResult({
         verification: {
           success: false,
           confidence: 0.3,
-          detectedObject: 'Visual anomaly',
+          detectedObject: 'Visual blur',
           observation: 'Unable to analyze image cleanly.',
-          explanation: 'Please capture a steady, well-lit shot of your target.',
+          explanation: 'Try capturing a steady, bright photo of your target.',
         },
         xpEarned: 0,
         photoUri,
@@ -203,12 +272,11 @@ export default function App() {
     }
   };
 
-  // Next Mission after success (Dynamic Mission Chaining - FR-14)
   const handleNextMission = async () => {
     if (!expedition || !verificationResult) return;
 
     setIsLoading(true);
-    setLoadingMessage('Synthesizing next chained mission...');
+    setLoadingMessage('Crafting next chained outdoor mission...');
     try {
       const nextDiff = calculateNextDifficulty(expedition.missions.length);
       const nextMission = await defaultAIProvider.generateMission({
@@ -220,6 +288,7 @@ export default function App() {
       });
 
       setMission(nextMission);
+      await saveCurrentMission(nextMission);
       setVerificationResult(null);
       setScreen('MISSION');
     } catch (err) {
@@ -229,19 +298,18 @@ export default function App() {
     }
   };
 
-  // Retry failed mission
   const handleRetry = () => {
     setVerificationResult(null);
     setScreen('CAMERA');
   };
 
-  // Finish expedition and view summary (FR-24)
   const handleFinishExpedition = async () => {
     if (!expedition) return;
     const finished = completeExpedition(expedition);
     setExpedition(finished);
     await saveExpeditionToHistory(finished);
     await saveCurrentExpedition(null);
+    await saveCurrentMission(null);
 
     const updatedLifetime = await loadLifetimeXP();
     setLifetimeXP(updatedLifetime);
@@ -251,168 +319,204 @@ export default function App() {
 
   return (
     <SafeAreaProvider style={{ flex: 1, backgroundColor: THEME.colors.bg }}>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView
+        style={styles.safeArea}
+        edges={screen === 'CAMERA' ? [] : ['top', 'left', 'right']}
+      >
         <ExpoStatusBar style="light" />
 
-      {/* Screen: HOME (FR-01) */}
-      {screen === 'HOME' && (
-        <ScrollView contentContainerStyle={styles.homeContainer}>
-          {/* Top Bar with Settings */}
-          <View style={styles.homeTopBar}>
-            <View style={styles.liveIndicator}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveText}>SYSTEM ONLINE</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.settingsIconBtn}
-              onPress={() => setIsSettingsOpen(true)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.settingsIconText}>⚙ TELEMETRY</Text>
-            </TouchableOpacity>
-          </View>
+        {/* SCREEN: HOME / WELCOME */}
+        {screen === 'HOME' && (
+          <View style={styles.homeWrapper}>
+            <Image
+              source={require('./assets/home_bg.jpg')}
+              style={styles.homeBgImage}
+              resizeMode="cover"
+            />
 
-          {/* Main Title Hero */}
-          <View style={styles.heroSection}>
-            <Text style={styles.heroPreTitle}>AI-POWERED REAL-WORLD EXPEDITION</Text>
-            <Text style={styles.heroTitle}>MUSE</Text>
-            <Text style={styles.tagline}>See the world differently.</Text>
-            <Text style={styles.subTagline}>
-              An AI that needs you to stop looking at it.
-            </Text>
-          </View>
+            <ScrollView contentContainerStyle={styles.homeContainer} showsVerticalScrollIndicator={false}>
+              {/* Top Bar */}
+              <View style={styles.homeTopBar}>
+                <View style={styles.logoTag}>
+                  <Text style={styles.logoEmoji}>✦</Text>
+                  <Text style={styles.logoText}>M U S E</Text>
+                </View>
 
-          {/* Core Concept Banner */}
-          <View style={styles.conceptCard}>
-            <View style={styles.conceptBadge}>
-              <Text style={styles.conceptBadgeText}>TOUCH GRASS // HACKTOBERFEST</Text>
-            </View>
-            <Text style={styles.conceptText}>
-              The phone is not the game board. The physical campus is. Receive short observation challenges powered by Gemma 4, explore offline, and capture your discoveries.
-            </Text>
-          </View>
+                <View style={styles.topBarRight}>
+                  {lifetimeXP > 0 && (
+                    <View style={styles.topScorePill}>
+                      <Text style={styles.topScoreEmoji}>🏆</Text>
+                      <Text style={styles.topScoreText}>{lifetimeXP} XP</Text>
+                    </View>
+                  )}
 
-          {/* Lifetime XP Banner */}
-          {lifetimeXP > 0 && (
-            <View style={styles.lifetimeBox}>
-              <Text style={styles.lifetimeLabel}>LIFETIME DISCOVERIES</Text>
-              <Text style={styles.lifetimeXP}>+{lifetimeXP} XP</Text>
-            </View>
-          )}
+                  <TouchableOpacity
+                    style={styles.settingsBtn}
+                    onPress={() => setIsSettingsOpen(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.settingsIcon}>⚙️</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
 
-          {/* CTA Buttons */}
-          <View style={styles.homeActions}>
-            <TouchableOpacity
-              style={styles.startBtn}
-              onPress={handleStartExpedition}
-              disabled={isLoading}
-              activeOpacity={0.8}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#09090b" />
-              ) : (
-                <Text style={styles.startBtnText}>START EXPEDITION ▶</Text>
-              )}
-            </TouchableOpacity>
-
-            {expedition && !expedition.completedAt && (
-              <TouchableOpacity
-                style={styles.resumeBtn}
-                onPress={handleResumeExpedition}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.resumeBtnText}>
-                  RESUME EXPEDITION ({expedition.missions.length} COMPLETED)
+              {/* Cinematic Center Hero (Clean, cardless, matching anime exploration theme) */}
+              <View style={styles.cinematicHero}>
+                <View style={styles.starSymbolRing}>
+                  <Text style={styles.starSymbol}>✦</Text>
+                </View>
+                <Text style={styles.cinematicTitle}>M  U  S  E</Text>
+                <Text style={styles.cinematicTagline}>SEE THE WORLD DIFFERENTLY.</Text>
+                <Text style={styles.cinematicSubtitle}>
+                  Put your phone away. Step outside. Seek the hidden details of reality.
                 </Text>
-              </TouchableOpacity>
-            )}
+              </View>
+
+              {/* Action Section: Ivory Pill Button + Subtle Status */}
+              {expedition && !expedition.completedAt ? (
+                <View style={styles.actionContainer}>
+                  <View style={styles.activeQuestNotice}>
+                    <View style={styles.activeBadge}>
+                      <Text style={styles.activeBadgeText}>
+                        QUEST #{expedition.missions.length + 1} IN PROGRESS
+                      </Text>
+                    </View>
+                    <Text style={styles.activeQuestSub}>
+                      {expedition.missions.length === 0
+                        ? 'Trail initiated · Ready for target'
+                        : `${expedition.missions.length} discovery${
+                            expedition.missions.length > 1 ? 'ies' : ''
+                          } · +${expedition.totalXP} XP logged`}
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.ivoryPillBtn}
+                    onPress={handleResumeExpedition}
+                    disabled={isLoading}
+                    activeOpacity={0.88}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color={THEME.colors.ivoryText} />
+                    ) : (
+                      <Text style={styles.ivoryPillBtnText}>RESUME QUEST ➔</Text>
+                    )}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.freshTrailLink}
+                    onPress={handleStartExpedition}
+                    disabled={isLoading}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.freshTrailLinkText}>Start fresh trail 🔄</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.actionContainer}>
+                  <TouchableOpacity
+                    style={styles.ivoryPillBtn}
+                    onPress={handleStartExpedition}
+                    disabled={isLoading}
+                    activeOpacity={0.88}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color={THEME.colors.ivoryText} />
+                    ) : (
+                      <Text style={styles.ivoryPillBtnText}>START EXPLORING ➔</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
+            </ScrollView>
           </View>
-        </ScrollView>
-      )}
+        )}
 
-      {/* Screen: MISSION HUD (FR-03) */}
-      {screen === 'MISSION' && mission && expedition && (
-        <ScrollView contentContainerStyle={styles.missionContainer}>
-          <XPDisplay
-            totalXP={expedition.totalXP}
-            missionNumber={expedition.missions.length + 1}
-            difficulty={mission.difficulty}
-          />
-          <MissionCard
-            mission={mission}
-            onOpenCamera={handleOpenCamera}
-            onEndExpedition={handleFinishExpedition}
-            isGenerating={isLoading}
-          />
-        </ScrollView>
-      )}
-
-      {/* Screen: CAMERA (FR-04) */}
-      {screen === 'CAMERA' && mission && (
-        <CameraView
-          missionPrompt={mission.text}
-          onCapture={handlePhotoCaptured}
-          onCancel={() => setScreen('MISSION')}
-        />
-      )}
-
-      {/* Screen: ANALYZING OVERLAY (FR-05) */}
-      {screen === 'ANALYZING' && (
-        <View style={styles.analyzingContainer}>
-          <View style={styles.analyzingBox}>
-            <View style={styles.radarRing}>
-              <ActivityIndicator color={THEME.colors.accent} size="large" />
-            </View>
-            <Text style={styles.analyzingTag}>GEMMA 4 // MULTIMODAL INFERENCE</Text>
-            <Text style={styles.analyzingTitle}>Analyzing Discovery...</Text>
-            <Text style={styles.analyzingSub}>
-              Inspecting visual features, shadows, and semantic context.
-            </Text>
-          </View>
-        </View>
-      )}
-
-      {/* Screen: RESULT (FR-12, FR-13) */}
-      {screen === 'RESULT' && verificationResult && mission && (
-        <ScrollView contentContainerStyle={styles.resultContainer}>
-          {expedition && (
+        {/* SCREEN: MISSION HUD */}
+        {screen === 'MISSION' && mission && expedition && (
+          <ScrollView contentContainerStyle={styles.missionContainer} showsVerticalScrollIndicator={false}>
             <XPDisplay
               totalXP={expedition.totalXP}
-              missionNumber={expedition.missions.length}
+              missionNumber={expedition.missions.length + 1}
               difficulty={mission.difficulty}
             />
-          )}
-          <ResultCard
-            mission={mission}
-            verification={verificationResult.verification}
-            xpEarned={verificationResult.xpEarned}
-            photoUri={verificationResult.photoUri}
-            onNextMission={handleNextMission}
-            onRetry={handleRetry}
-            onFinishExpedition={handleFinishExpedition}
+            <MissionCard
+              mission={mission}
+              onOpenCamera={handleOpenCamera}
+              onPauseExpedition={handlePauseAndSave}
+              onFinishExpedition={handleFinishExpedition}
+              isGenerating={isLoading}
+            />
+          </ScrollView>
+        )}
+
+        {/* SCREEN: CAMERA */}
+        {screen === 'CAMERA' && mission && (
+          <CameraView
+            missionPrompt={mission.text}
+            onCapture={handlePhotoCaptured}
+            onCancel={() => setScreen('MISSION')}
           />
-        </ScrollView>
-      )}
+        )}
 
-      {/* Screen: EXPEDITION SUMMARY (FR-24) */}
-      {screen === 'SUMMARY' && expedition && (
-        <ExpeditionSummary
-          expedition={expedition}
-          onStartNewExpedition={handleStartExpedition}
-          onGoHome={() => setScreen('HOME')}
+        {/* SCREEN: ANALYZING OVERLAY */}
+        {screen === 'ANALYZING' && (
+          <View style={styles.analyzingContainer}>
+            <View style={styles.analyzingCard}>
+              <View style={styles.magnifierCircle}>
+                <Text style={styles.magnifierEmoji}>🔍</Text>
+              </View>
+              <Text style={styles.analyzingTitle}>Gemma is Inspecting...</Text>
+              <Text style={styles.analyzingSub}>
+                Examining your photo to verify your real-world discovery!
+              </Text>
+              <ActivityIndicator color={THEME.colors.primary} style={{ marginTop: 16 }} size="large" />
+            </View>
+          </View>
+        )}
+
+        {/* SCREEN: RESULT */}
+        {screen === 'RESULT' && verificationResult && mission && (
+          <ScrollView contentContainerStyle={styles.resultContainer} showsVerticalScrollIndicator={false}>
+            {expedition && (
+              <XPDisplay
+                totalXP={expedition.totalXP}
+                missionNumber={expedition.missions.length}
+                difficulty={mission.difficulty}
+              />
+            )}
+            <ResultCard
+              mission={mission}
+              verification={verificationResult.verification}
+              xpEarned={verificationResult.xpEarned}
+              photoUri={verificationResult.photoUri}
+              onNextMission={handleNextMission}
+              onRetry={handleRetry}
+              onPauseExpedition={handlePauseAndSave}
+              onFinishExpedition={handleFinishExpedition}
+            />
+          </ScrollView>
+        )}
+
+        {/* SCREEN: EXPEDITION SUMMARY */}
+        {screen === 'SUMMARY' && expedition && (
+          <ExpeditionSummary
+            expedition={expedition}
+            onStartNewExpedition={handleStartExpedition}
+            onGoHome={() => setScreen('HOME')}
+          />
+        )}
+
+        {/* Settings Modal */}
+        <SettingsModal
+          visible={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          settings={settings}
+          onUpdateSettings={handleUpdateSettings}
+          lifetimeXP={lifetimeXP}
         />
-      )}
-
-      {/* Settings Modal */}
-      <SettingsModal
-        visible={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        settings={settings}
-        onUpdateSettings={handleUpdateSettings}
-        lifetimeXP={lifetimeXP}
-      />
-    </SafeAreaView>
-  </SafeAreaProvider>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
@@ -420,184 +524,190 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: THEME.colors.bg,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+  },
+  homeWrapper: {
+    flex: 1,
+    position: 'relative',
+    backgroundColor: THEME.colors.bg,
+  },
+  homeBgImage: {
+    ...StyleSheet.absoluteFill,
+    width: '100%',
+    height: '100%',
+    opacity: 0.45,
   },
   homeContainer: {
     padding: 24,
-    paddingTop: 36,
-    paddingBottom: 48,
+    paddingTop: 16,
+    paddingBottom: 44,
     flexGrow: 1,
     justifyContent: 'space-between',
+    backgroundColor: 'transparent',
   },
   homeTopBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 20,
   },
-  liveIndicator: {
+  logoTag: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: THEME.colors.accent,
+  logoEmoji: {
+    fontSize: 16,
+    color: THEME.colors.secondary,
   },
-  liveText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 10,
+  logoText: {
+    fontSize: 15,
     fontWeight: '800',
-    color: THEME.colors.accentLight,
-    letterSpacing: 1,
+    color: THEME.colors.textPrimary,
+    letterSpacing: 3,
   },
-  settingsIconBtn: {
-    backgroundColor: THEME.colors.surfaceElevated,
+  settingsBtn: {
+    backgroundColor: THEME.colors.surfaceCard,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+  },
+  settingsIcon: {
+    fontSize: 16,
+  },
+  topBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  topScorePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(245, 190, 108, 0.12)',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: THEME.colors.border,
+    borderColor: 'rgba(245, 190, 108, 0.35)',
   },
-  settingsIconText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 10,
-    fontWeight: '700',
-    color: THEME.colors.textSecondary,
-    letterSpacing: 0.8,
+  topScoreEmoji: {
+    fontSize: 12,
   },
-  heroSection: {
-    marginBottom: 32,
-  },
-  heroPreTitle: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 11,
+  topScoreText: {
+    fontSize: 12,
     fontWeight: '800',
-    color: THEME.colors.accentLight,
-    letterSpacing: 1.5,
-    marginBottom: 8,
-  },
-  heroTitle: {
-    fontSize: 54,
-    fontWeight: '900',
-    color: THEME.colors.textPrimary,
-    letterSpacing: -2,
-    lineHeight: 60,
-    marginBottom: 12,
-  },
-  tagline: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: THEME.colors.textPrimary,
-    letterSpacing: -0.5,
-    marginBottom: 6,
-  },
-  subTagline: {
-    fontSize: 14,
-    color: THEME.colors.textSecondary,
-    fontStyle: 'italic',
-  },
-  conceptCard: {
-    backgroundColor: THEME.colors.surface,
-    padding: 20,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
-    marginBottom: 24,
-  },
-  conceptBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: THEME.colors.accentBorder,
-    marginBottom: 10,
-  },
-  conceptBadgeText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 9,
-    fontWeight: '800',
-    color: THEME.colors.accentLight,
-    letterSpacing: 0.8,
-  },
-  conceptText: {
-    fontSize: 13,
-    lineHeight: 20,
-    color: THEME.colors.textSecondary,
-  },
-  lifetimeBox: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: THEME.colors.surfaceElevated,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
-    marginBottom: 32,
-  },
-  lifetimeLabel: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 10,
-    color: THEME.colors.textMuted,
+    color: THEME.colors.secondary,
     letterSpacing: 0.5,
   },
-  lifetimeXP: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 14,
-    fontWeight: '800',
-    color: THEME.colors.accentLight,
-  },
-  homeActions: {
-    gap: 12,
-    marginTop: 20,
-  },
-  startBtn: {
-    backgroundColor: THEME.colors.accent,
-    paddingVertical: 18,
-    borderRadius: 16,
+  cinematicHero: {
     alignItems: 'center',
-    shadowColor: THEME.colors.accent,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
-    elevation: 6,
+    marginVertical: 40,
   },
-  startBtnText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 14,
+  starSymbolRing: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    borderWidth: 1.5,
+    borderColor: 'rgba(245, 190, 108, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    backgroundColor: 'rgba(22, 40, 64, 0.5)',
+  },
+  starSymbol: {
+    fontSize: 32,
+    color: THEME.colors.textPrimary,
+  },
+  cinematicTitle: {
+    fontSize: 36,
     fontWeight: '900',
-    color: '#09090b',
+    color: THEME.colors.textPrimary,
+    letterSpacing: 8,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  cinematicTagline: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: THEME.colors.secondary,
+    letterSpacing: 3,
+    marginBottom: 14,
+    textAlign: 'center',
+  },
+  cinematicSubtitle: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: THEME.colors.textSecondary,
+    textAlign: 'center',
+    maxWidth: 290,
+  },
+  actionContainer: {
+    gap: 14,
+    width: '100%',
+    marginTop: 'auto',
+  },
+  activeQuestNotice: {
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 6,
+  },
+  activeBadge: {
+    backgroundColor: 'rgba(245, 190, 108, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 190, 108, 0.4)',
+  },
+  activeBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: THEME.colors.secondary,
     letterSpacing: 1,
   },
-  resumeBtn: {
-    backgroundColor: THEME.colors.surfaceElevated,
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
+  activeQuestSub: {
+    fontSize: 13,
+    color: THEME.colors.textMuted,
   },
-  resumeBtnText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 11,
-    fontWeight: '700',
-    color: THEME.colors.accentLight,
-    letterSpacing: 0.8,
+  ivoryPillBtn: {
+    backgroundColor: THEME.colors.ivory,
+    paddingVertical: 18,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: THEME.colors.secondary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  ivoryPillBtnText: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: THEME.colors.ivoryText,
+    letterSpacing: 2,
+  },
+  freshTrailLink: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  freshTrailLinkText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.colors.textMuted,
   },
   missionContainer: {
     padding: 20,
-    paddingTop: 24,
+    paddingTop: 16,
     paddingBottom: 40,
   },
   resultContainer: {
     padding: 20,
-    paddingTop: 24,
+    paddingTop: 16,
     paddingBottom: 40,
   },
   analyzingContainer: {
@@ -607,43 +717,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
   },
-  analyzingBox: {
-    backgroundColor: THEME.colors.surface,
+  analyzingCard: {
+    backgroundColor: THEME.colors.surfaceCard,
     padding: 32,
-    borderRadius: 24,
-    borderWidth: 1,
+    borderRadius: 32,
+    borderWidth: 2,
     borderColor: THEME.colors.border,
     alignItems: 'center',
-    maxWidth: 340,
+    maxWidth: 320,
     width: '100%',
   },
-  radarRing: {
-    marginBottom: 24,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+  magnifierCircle: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: THEME.colors.surfaceElevated,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: THEME.colors.accentBorder,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: THEME.colors.primary,
   },
-  analyzingTag: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 9,
-    fontWeight: '800',
-    color: THEME.colors.accentLight,
-    letterSpacing: 1,
-    marginBottom: 8,
+  magnifierEmoji: {
+    fontSize: 32,
   },
   analyzingTitle: {
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '900',
     color: THEME.colors.textPrimary,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   analyzingSub: {
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 18,
     color: THEME.colors.textMuted,
     textAlign: 'center',

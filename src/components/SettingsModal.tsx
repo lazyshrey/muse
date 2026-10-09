@@ -48,19 +48,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <View style={styles.sheet}>
           <View style={styles.header}>
             <View>
-              <Text style={styles.headerTag}>SYSTEM TELEMETRY</Text>
-              <Text style={styles.title}>MUSE Configuration</Text>
+              <Text style={styles.headerTag}>⚙️ GAME SETTINGS</Text>
+              <Text style={styles.title}>MUSE Config & Stats</Text>
             </View>
             <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
               <Text style={styles.closeBtnText}>✕</Text>
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.body}>
+          <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
             {/* Lifetime Stats */}
             <View style={styles.statsCard}>
-              <Text style={styles.statsLabel}>LIFETIME DISCOVERY XP</Text>
-              <Text style={styles.statsValue}>{lifetimeXP} XP</Text>
+              <Text style={styles.statsLabel}>LIFETIME DISCOVERY SCORE</Text>
+              <Text style={styles.statsValue}>🪙 {lifetimeXP} XP</Text>
             </View>
 
             {/* AI Provider Selector */}
@@ -80,7 +80,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 >
                   <View style={styles.optionInfo}>
                     <Text style={styles.optionName}>Auto-Detect (Recommended)</Text>
-                    <Text style={styles.optionDetail}>Local Gemma 4 → Remote API → Offline fallback</Text>
+                    <Text style={styles.optionDetail}>Local Gemma 4 → Remote API → Touch Grass</Text>
                   </View>
                   {provider === 'auto' && <View style={styles.activeDot} />}
                 </TouchableOpacity>
@@ -94,7 +94,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 >
                   <View style={styles.optionInfo}>
                     <Text style={styles.optionName}>Gemma Multimodal API</Text>
-                    <Text style={styles.optionDetail}>Google AI endpoint using Gemma/Gemini vision</Text>
+                    <Text style={styles.optionDetail}>Cloud Google AI endpoint with vision</Text>
                   </View>
                   {provider === 'gemma-api' && <View style={styles.activeDot} />}
                 </TouchableOpacity>
@@ -122,7 +122,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 >
                   <View style={styles.optionInfo}>
                     <Text style={styles.optionName}>Offline Engine (Touch Grass)</Text>
-                    <Text style={styles.optionDetail}>Simulated heuristics, no cloud or cell data used</Text>
+                    <Text style={styles.optionDetail}>Built-in offline simulation, zero cell data</Text>
                   </View>
                   {provider === 'fallback' && <View style={styles.activeDot} />}
                 </TouchableOpacity>
@@ -150,7 +150,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* Footer Save */}
           <View style={styles.footer}>
             <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-              <Text style={styles.saveBtnText}>SAVE CONFIGURATION</Text>
+              <Text style={styles.saveBtnText}>SAVE SETTINGS ✨</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -166,11 +166,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: THEME.colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: THEME.colors.surfaceCard,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     maxHeight: '85%',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: THEME.colors.border,
     paddingBottom: 24,
   },
@@ -179,20 +179,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 24,
-    borderBottomWidth: 1,
+    borderBottomWidth: 1.5,
     borderBottomColor: THEME.colors.border,
   },
   headerTag: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 10,
-    fontWeight: '800',
-    color: THEME.colors.accentLight,
-    letterSpacing: 1,
+    fontSize: 11,
+    fontWeight: '900',
+    color: THEME.colors.secondary,
+    letterSpacing: 0.5,
     marginBottom: 4,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: '900',
     color: THEME.colors.textPrimary,
   },
   closeBtn: {
@@ -201,41 +200,40 @@ const styles = StyleSheet.create({
   closeBtnText: {
     fontSize: 18,
     color: THEME.colors.textMuted,
+    fontWeight: 'bold',
   },
   body: {
     padding: 24,
   },
   statsCard: {
     backgroundColor: THEME.colors.surfaceElevated,
-    borderRadius: 14,
+    borderRadius: 18,
     padding: 16,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
+    borderWidth: 1.5,
+    borderColor: THEME.colors.borderHighlight,
     alignItems: 'center',
     marginBottom: 24,
   },
   statsLabel: {
-    fontFamily: THEME.fonts.mono,
     fontSize: 10,
+    fontWeight: '900',
     color: THEME.colors.textMuted,
-    letterSpacing: 1,
+    letterSpacing: 0.8,
     marginBottom: 4,
   },
   statsValue: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '900',
-    color: THEME.colors.accentLight,
+    color: THEME.colors.secondary,
   },
   section: {
     marginBottom: 24,
   },
   sectionTitle: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '900',
     color: THEME.colors.textPrimary,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
     marginBottom: 4,
   },
   sectionDesc: {
@@ -253,13 +251,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: THEME.colors.surfaceElevated,
     padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: 16,
+    borderWidth: 1.5,
     borderColor: THEME.colors.border,
   },
   optionRowActive: {
-    borderColor: THEME.colors.accent,
-    backgroundColor: '#0c1612',
+    borderColor: THEME.colors.secondary,
+    backgroundColor: '#282414',
   },
   optionInfo: {
     flex: 1,
@@ -267,7 +265,7 @@ const styles = StyleSheet.create({
   },
   optionName: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
     color: THEME.colors.textPrimary,
   },
   optionDetail: {
@@ -275,20 +273,19 @@ const styles = StyleSheet.create({
     color: THEME.colors.textMuted,
   },
   activeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: THEME.colors.accent,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: THEME.colors.secondary,
   },
   textInput: {
     backgroundColor: THEME.colors.surfaceElevated,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: THEME.colors.border,
-    borderRadius: 12,
+    borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 14,
     color: THEME.colors.textPrimary,
-    fontFamily: THEME.fonts.mono,
     fontSize: 13,
   },
   footer: {
@@ -296,16 +293,17 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   saveBtn: {
-    backgroundColor: THEME.colors.accent,
-    paddingVertical: 16,
-    borderRadius: 14,
+    backgroundColor: THEME.colors.primary,
+    paddingVertical: 18,
+    borderRadius: 20,
     alignItems: 'center',
+    borderBottomWidth: 4,
+    borderBottomColor: THEME.colors.primaryDark,
   },
   saveBtnText: {
-    fontFamily: THEME.fonts.mono,
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '900',
-    color: '#09090b',
-    letterSpacing: 1,
+    color: '#ffffff',
+    letterSpacing: 0.5,
   },
 });
